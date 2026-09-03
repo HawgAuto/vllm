@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
 
+import importlib
 from typing import Literal, get_args
 
 from vllm.logger import init_logger
@@ -35,6 +36,9 @@ QuantizationMethods = Literal[
     "gpt_oss_mxfp4",
     "deepseek_v4_fp8",
     "online",
+    "gfx1151-w4a4-incumbent",
+    "gfx1151-w4a4-m1-pair2",
+    "gfx1151-w4a4-v4q-m1-pair2",
     # Below are online quant shorthand names (see vllm.config.quantization).
     # Listed here as strings to avoid a circular import; kept in sync with
     # _ONLINE_SHORTHANDS by the assertion in get_quantization_config().
@@ -46,6 +50,12 @@ QuantizationMethods = Literal[
     "mxfp8",
 ]
 QUANTIZATION_METHODS: list[str] = list(get_args(QuantizationMethods))
+
+_GFX1151_ARCHIVE_W4A4_METHODS = {
+    "gfx1151-w4a4-incumbent",
+    "gfx1151-w4a4-m1-pair2",
+    "gfx1151-w4a4-v4q-m1-pair2",
+}
 
 DEPRECATED_QUANTIZATION_METHODS = [
     "fbgemm_fp8",
@@ -109,6 +119,14 @@ def register_quantization_config(quantization: str):
 def get_quantization_config(quantization: str) -> type[QuantizationConfig]:
     if quantization not in QUANTIZATION_METHODS:
         raise ValueError(f"Invalid quantization method: {quantization}")
+
+    if (
+        quantization in _GFX1151_ARCHIVE_W4A4_METHODS
+        and quantization not in _CUSTOMIZED_METHOD_TO_QUANT_CONFIG
+    ):
+        importlib.import_module(
+            "vllm.model_executor.layers.quantization.gfx1151_w4a4_archive"
+        )
 
     # lazy import to avoid triggering `torch.compile` too early
     from vllm.config.quantization import _ONLINE_SHORTHANDS

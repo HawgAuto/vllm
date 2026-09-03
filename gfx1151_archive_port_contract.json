@@ -1,0 +1,49 @@
+{
+  "base_commit": "4bdc8a788d2e2ce9165d552b3d4d8b72604626bf",
+  "families": {
+    "w4a4": {
+      "build_manifest_sha256": "34cd1fba7da7df504ed1d882a75d2d21494884e9f45f014c3716c2d8a638d217",
+      "checkpoint_scale_dtype": "bfloat16",
+      "checkpoint_weight_dtype": "int32",
+      "group_size": 32,
+      "native_artifacts_built": true,
+      "native_source_count": 4,
+      "source_fidelity": "donor_semantics_with_two_trailing_whitespace_removals",
+      "quantization_methods": [
+        "gfx1151-w4a4-incumbent",
+        "gfx1151-w4a4-m1-pair2",
+        "gfx1151-w4a4-v4q-m1-pair2"
+      ],
+      "wire": "gfx1151-w4a4-g32-v1"
+    },
+    "w8a8": {
+      "checkpoint_scale_dtype": "float32",
+      "checkpoint_weight_dtype": "int8",
+      "quantization_method": "compressed-tensors",
+      "required_linear_backend": "triton",
+      "source_fidelity": "donor_consumer_methods_with_complete_locked_trace_write_hardening",
+      "wire": "compressed-tensors-int8-dynamic-token"
+    }
+  },
+  "gpu_qualified": false,
+  "historical_binaries_reused": false,
+  "historical_promotion_reused": false,
+  "performance_qualified": false,
+  "production_ready": false,
+  "promotion_authority": false,
+  "quality_qualified": false,
+  "hardening_adaptations": [
+    "canonical module/source/library manifest identities",
+    "openat O_NOFOLLOW immutable descriptor validation and /proc/self/fd loading",
+    "complete flock-serialized JSONL trace writes",
+    "two trailing horizontal whitespace removals in the qfloat HIP donor"
+  ],
+  "schema": "gfx1151.archive-dual-family.rocm10-port.v2",
+  "selection_scope": "explicit_model_profile_only",
+  "status": "CPU_BUILT_GPU_UNQUALIFIED",
+  "target": {
+    "arch": "gfx1151",
+    "rocm": "10.0",
+    "vllm": "0.27.0"
+  }
+}

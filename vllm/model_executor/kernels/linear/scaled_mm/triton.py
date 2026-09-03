@@ -2,6 +2,11 @@
 # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
 
 
+import fcntl
+import json
+import os
+import time
+
 import torch
 
 from vllm import _custom_ops as ops
@@ -22,6 +27,41 @@ from .cutlass import CutlassInt8ScaledMMLinearKernel
 from .ScaledMMLinearKernel import (
     Int8ScaledMMLinearLayerConfig,
 )
+
+
+def _append_json_line(path: str, line: bytes) -> None:
+    fd = os.open(path, os.O_APPEND | os.O_CREAT | os.O_WRONLY, 0o600)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        remaining = memoryview(line)
+        while remaining:
+            written = os.write(fd, remaining)
+            if written <= 0:
+                raise OSError("W8A8 trace write made no progress")
+            remaining = remaining[written:]
+    finally:
+        os.close(fd)
+
+
+def _trace_gfx1151_w8a8(*, x: torch.Tensor, w_q: torch.Tensor) -> None:
+    trace_path = os.environ.get("VLLM_GFX1151_W8A8_TRACE_PATH")
+    if not trace_path:
+        return
+    payload = {
+        "schema_version": 1,
+        "pid": os.getpid(),
+        "monotonic_ns": time.monotonic_ns(),
+        "family": "w8a8",
+        "kernel": "TritonInt8ScaledMMLinearKernel",
+        "route": "triton_int8_scaled_mm",
+        "M": int(x.shape[0]),
+        "N": int(w_q.shape[1]),
+        "K": int(x.shape[1]),
+        "weight_dtype": str(w_q.dtype),
+        "activation_dtype": str(x.dtype),
+    }
+    line = json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n"
+    _append_json_line(trace_path, line.encode())
 
 
 class TritonInt8ScaledMMLinearKernel(CutlassInt8ScaledMMLinearKernel):
@@ -153,6 +193,7 @@ class TritonInt8ScaledMMLinearKernel(CutlassInt8ScaledMMLinearKernel):
                 # Static per-tensor: azp already folded into azp_adj
                 out -= (x_s * w_s_row * azp_adj).to(x.dtype)
 
+        _trace_gfx1151_w8a8(x=x, w_q=w_q)
         return out
 
 

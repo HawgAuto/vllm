@@ -516,6 +516,9 @@ class RocmPlatform(Platform):
         "fp8_per_channel",
         "online",
         "gpt_oss_mxfp4",
+        "gfx1151-w4a4-incumbent",
+        "gfx1151-w4a4-m1-pair2",
+        "gfx1151-w4a4-v4q-m1-pair2",
     ]
 
     @classmethod
