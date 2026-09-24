@@ -177,6 +177,7 @@ steps:
   timeout_in_minutes: 20
   device: cpu-small
   source_file_dependencies:
+  - vllm/model_executor/model_loader/default_loader.py
   - vllm/models/qwen4_exp/
   - vllm/transformers_utils/configs/qwen4_exp.py
   - vllm/config/compilation.py
@@ -184,6 +185,8 @@ steps:
   - tests/models/qwen4_exp/
   commands:
     - pytest -v -s models/qwen4_exp/test_config.py models/qwen4_exp/test_ple.py
+    # AMD and NVIDIA HC custom ops must be collected in separate processes.
+    - pytest -v -s models/qwen4_exp/test_ple_ssd.py
 
 - label: ":computer: (CPU) Basic Models Other"
   key: basic-models-test-other-cpu

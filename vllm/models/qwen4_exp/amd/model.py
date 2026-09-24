@@ -167,6 +167,10 @@ class Qwen4ExpSparseMoeBlock(Qwen3NextSparseMoeBlock):
         super().__init__(vllm_config=vllm_config, prefix=prefix)
         config = vllm_config.model_config.hf_text_config
         self.n_shared_experts = int(config.shared_expert_intermediate_size > 0)
+        if getattr(vllm_config.quant_config, "_mtp_dense_policy", None) is not None:
+            from mtp_dense import wire_shared_gate
+
+            wire_shared_gate(self, vllm_config.quant_config, prefix)
 
 
 class Qwen4ExpDecoderLayer(nn.Module):
@@ -266,10 +270,12 @@ class Qwen4ExpDecoderLayer(nn.Module):
         self.attn_hyper_connection = GatedResidual(
             hc_config,
             prefix=maybe_prefix(prefix, "attn_hyper_connection"),
+            quant_config=quant_config,
         )
         self.mlp_hyper_connection = GatedResidual(
             hc_config,
             prefix=maybe_prefix(prefix, "mlp_hyper_connection"),
+            quant_config=quant_config,
         )
 
     def forward(

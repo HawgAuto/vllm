@@ -3,14 +3,23 @@
 """GPU-resident Qwen4Exp position-learning enhancement layers."""
 
 import math
+import weakref
 from collections.abc import Iterable, Sequence
+from typing import Any
 
 import torch
 import torch.nn.functional as F
 from torch import nn
 
+from vllm.compilation.breakable_cudagraph import (
+    BreakableCUDAGraphCapture,
+    eager_break_during_capture,
+    is_breakable_cudagraph_enabled,
+)
 from vllm.config import CacheConfig, ModelConfig, VllmConfig, get_current_vllm_config
+from vllm.config.compilation import CompilationMode, CUDAGraphMode
 from vllm.forward_context import get_forward_context
+from vllm.logger import init_logger
 from vllm.model_executor.layers.linear import ReplicatedLinear
 from vllm.model_executor.layers.mamba.abstract import MambaBase
 from vllm.model_executor.layers.mamba.mamba_utils import (
@@ -31,6 +40,158 @@ from vllm.v1.attention.backends.short_conv_attn import (
 from vllm.v1.attention.backends.utils import NULL_BLOCK_ID
 
 from ..common.ple import PLEVocabParallelEmbedding
+
+logger = init_logger(__name__)
+
+
+def _ple_checkpoint_prefix(runtime_prefix: str) -> str:
+    # Invert the native AMD model's HF mapper: model.language_model. -> model.
+    # Keep already-checkpoint-qualified and older nested wrapper names intact.
+    if runtime_prefix.startswith("language_model.model.layers."):
+        return (
+            "model.language_model.layers."
+            + runtime_prefix[len("language_model.model.layers.") :]
+        )
+    if runtime_prefix.startswith("model.layers."):
+        return "model.language_model." + runtime_prefix[len("model.") :]
+    return runtime_prefix.replace(
+        ".language_model.model.layers.", ".language_model.layers."
+    )
+
+
+def validate_qwen4_ple_ssd_config(vllm_config: VllmConfig) -> None:
+    """Reject execution modes that cannot safely perform synchronous SSD I/O."""
+    if vllm_config.model_config.dtype != torch.bfloat16:
+        raise ValueError("VLLM_QWEN4_PLE_SSD requires native BF16 model dtype")
+    compilation = vllm_config.compilation_config
+    if compilation.cudagraph_mode not in (CUDAGraphMode.NONE, CUDAGraphMode.PIECEWISE):
+        raise ValueError(
+            "SSD PLE requires NONE or PIECEWISE graphs; pread cannot be captured"
+        )
+    if compilation.cudagraph_mode == CUDAGraphMode.PIECEWISE:
+        split_op = "vllm::qwen4_exp_amd_ple_ssd_embedding"
+        if not is_breakable_cudagraph_enabled() and not (
+            compilation.mode == CompilationMode.VLLM_COMPILE
+            and split_op in (compilation.splitting_ops or [])
+        ):
+            raise ValueError(
+                "SSD PLE requires a breakable graph or an explicit SSD splitting op"
+            )
+    if vllm_config.parallel_config.tensor_parallel_size != 1:
+        raise ValueError("VLLM_QWEN4_PLE_SSD requires tensor parallel size 1")
+    if vllm_config.parallel_config.pipeline_parallel_size != 1:
+        raise ValueError("VLLM_QWEN4_PLE_SSD requires pipeline parallel size 1")
+    load_config = vllm_config.load_config
+    if load_config.load_format not in ("auto", "safetensors"):
+        raise ValueError("VLLM_QWEN4_PLE_SSD requires the safetensors loader")
+    if load_config.model_loader_extra_config.get("enable_multithread_load"):
+        raise ValueError("VLLM_QWEN4_PLE_SSD does not support multithread loading")
+    if load_config.safetensors_load_strategy != "lazy":
+        raise ValueError("VLLM_QWEN4_PLE_SSD requires --safetensors-load-strategy=lazy")
+
+
+class Qwen4ExpPLESSDEmbedding(nn.Module):
+    """Bounded BF16 row lookup backed by a ``PLESafetensorsReader``."""
+
+    def __init__(
+        self,
+        *,
+        reader: Any,
+        num_embeddings: int,
+        embedding_dim: int,
+        allow_mixed_shard_pread: bool = False,
+    ) -> None:
+        super().__init__()
+        if getattr(reader, "mixed_shard_paths", ()) and (
+            not allow_mixed_shard_pread
+            or not callable(getattr(reader, "iter_mixed_shard_weights", None))
+        ):
+            reader.close()
+            raise ValueError(
+                "VLLM_QWEN4_PLE_SSD cannot mmap mixed PLE/native safetensors files"
+            )
+        self.reader = reader
+        self.org_vocab_size = num_embeddings
+        self.embedding_dim = embedding_dim
+        self.params_dtype = torch.bfloat16
+        self._logged_first_gather = False
+        self._reader_finalizer = weakref.finalize(self, self._close_reader, reader)
+
+    @property
+    def tensor_names(self) -> frozenset[str]:
+        return self.reader.tensor_names
+
+    @property
+    def ple_only_shard_paths(self) -> frozenset[str]:
+        return self.reader.ple_only_shard_paths
+
+    @property
+    def ple_mixed_shard_paths(self) -> frozenset[str]:
+        return self.reader.mixed_shard_paths
+
+    def iter_mixed_shard_weights(self):
+        return self.reader.iter_mixed_shard_weights()
+
+    def stats(self) -> dict[str, Any]:
+        return self.reader.stats()
+
+    def close(self) -> None:
+        self._reader_finalizer()
+
+    @staticmethod
+    def _close_reader(reader: Any) -> None:
+        reader.close()
+        logger.info("Qwen4Exp PLE SSD reader closed; stats: %s", reader.stats())
+
+    def forward(self, input_ids: torch.Tensor) -> torch.Tensor:
+        if input_ids.dtype not in (torch.int32, torch.int64):
+            raise ValueError("PLE row IDs must be int32 or int64")
+        if input_ids.is_cuda and torch.cuda.is_current_stream_capturing():
+            raise RuntimeError("SSD PLE lookup must run outside stream capture")
+        shape = (*input_ids.shape, self.embedding_dim)
+        row_ids = input_ids.detach().reshape(-1)
+        output = torch.empty(
+            (row_ids.numel(), self.embedding_dim),
+            dtype=torch.bfloat16,
+            device=input_ids.device,
+        )
+        max_batch_rows = getattr(self.reader, "max_batch_rows", 65536)
+        for start in range(0, row_ids.numel(), max_batch_rows):
+            ids = row_ids[start : start + max_batch_rows].to(
+                device="cpu", dtype=torch.int64
+            )
+            raw = self.reader.gather_bytes(ids.tolist())
+            expected_bytes = ids.numel() * self.embedding_dim * 2
+            if len(raw) != expected_bytes:
+                raise RuntimeError(
+                    f"PLE SSD reader returned {len(raw)} bytes, "
+                    f"expected {expected_bytes}"
+                )
+            rows = torch.frombuffer(bytearray(raw), dtype=torch.bfloat16).reshape(
+                -1, self.embedding_dim
+            )
+            output[start : start + ids.numel()].copy_(rows)
+            del raw, rows
+        if not self._logged_first_gather and row_ids.numel():
+            logger.info("Qwen4Exp PLE SSD reader stats: %s", self.reader.stats())
+            self._logged_first_gather = True
+        return output.reshape(shape)
+
+
+def _ssd_ple_lookup_or_profile_zeros(
+    embedding: Qwen4ExpPLESSDEmbedding,
+    ngram_ids: torch.Tensor,
+) -> torch.Tensor:
+    if (
+        get_forward_context().attn_metadata is None
+        or BreakableCUDAGraphCapture.is_active()
+    ):
+        return torch.zeros(
+            (*ngram_ids.shape, embedding.embedding_dim),
+            dtype=torch.bfloat16,
+            device=ngram_ids.device,
+        )
+    return embedding(ngram_ids)
 
 
 class Qwen4ExpPLEGroupedNorm(nn.Module):
@@ -224,12 +385,43 @@ class Qwen4ExpNGramEmbedding(nn.Module):
         )
         divisor = int(config.make_ngram_vocab_size_divisible_by)
         padded_vocab_size = ((total_vocab_size + divisor - 1) // divisor) * divisor
-        self.ngram_embedding = PLEVocabParallelEmbedding(
-            padded_vocab_size,
-            self.head_dim,
-            padding_size=divisor,
-            prefix=f"{prefix}.ngram_embedding",
-        )
+        from vllm import envs
+
+        self.use_ssd = envs.VLLM_QWEN4_PLE_SSD
+        if self.use_ssd:
+            vllm_config = get_current_vllm_config()
+            validate_qwen4_ple_ssd_config(vllm_config)
+            from ..common.ple_ssd import PLESafetensorsReader
+
+            logger.info(
+                "Qwen4Exp PLE SSD selection: runtime_prefix=%s checkpoint_prefix=%s "
+                "parts=%d rows=%d dim=%d",
+                prefix,
+                _ple_checkpoint_prefix(f"{prefix}.ngram_embedding"),
+                self.split_ngram_parts,
+                padded_vocab_size,
+                self.head_dim,
+            )
+            reader = PLESafetensorsReader(
+                vllm_config.model_config.model,
+                num_embeddings=padded_vocab_size,
+                embedding_dim=self.head_dim,
+                split_ngram_parts=self.split_ngram_parts,
+                tensor_prefix=_ple_checkpoint_prefix(f"{prefix}.ngram_embedding"),
+            )
+            self.ngram_embedding = Qwen4ExpPLESSDEmbedding(
+                reader=reader,
+                num_embeddings=padded_vocab_size,
+                embedding_dim=self.head_dim,
+                allow_mixed_shard_pread=True,
+            )
+        else:
+            self.ngram_embedding = PLEVocabParallelEmbedding(
+                padded_vocab_size,
+                self.head_dim,
+                padding_size=divisor,
+                prefix=f"{prefix}.ngram_embedding",
+            )
         self.register_buffer(
             "positions_buffer",
             torch.arange(max_total_tokens, dtype=torch.int64),
@@ -348,11 +540,14 @@ class Qwen4ExpNGramEmbedding(nn.Module):
             (ngram_ids.shape[0], self.embedding_dim),
             dtype=self.ngram_embedding.params_dtype,
         )
-        torch.ops.vllm.qwen4_exp_amd_ple_ngram_embedding(
-            ngram_ids,
-            output,
-            self.layer_name,
-        )
+        if self.use_ssd:
+            torch.ops.vllm.qwen4_exp_amd_ple_ssd_embedding(
+                ngram_ids, output, self.layer_name
+            )
+        else:
+            torch.ops.vllm.qwen4_exp_amd_ple_ngram_embedding(
+                ngram_ids, output, self.layer_name
+            )
         return output
 
     def load_weights(self, weights: Iterable[tuple[str, torch.Tensor]]) -> set[str]:
@@ -1081,6 +1276,21 @@ def qwen4_exp_amd_ple_ngram_embedding(
     output.copy_(result)
 
 
+@eager_break_during_capture
+def qwen4_exp_amd_ple_ssd_embedding(
+    ngram_ids: torch.Tensor,
+    output: torch.Tensor,
+    layer_name: str,
+) -> None:
+    if ngram_ids.is_cuda and torch.cuda.is_current_stream_capturing():
+        raise RuntimeError("SSD PLE custom op must be an eager graph boundary")
+    layer = get_forward_context().no_compile_layers[layer_name]
+    embedding = layer.ple_embedding.ngram_embedding
+    if not isinstance(embedding, Qwen4ExpPLESSDEmbedding):
+        raise TypeError(f"{layer_name} is not an SSD PLE owner")
+    output.copy_(_ssd_ple_lookup_or_profile_zeros(embedding, ngram_ids).flatten(-2))
+
+
 def qwen4_exp_ple_short_conv(
     inputs: torch.Tensor,
     output: torch.Tensor,
@@ -1099,6 +1309,13 @@ direct_register_custom_op(
 
 
 direct_register_custom_op(
+    op_name="qwen4_exp_amd_ple_ssd_embedding",
+    op_func=qwen4_exp_amd_ple_ssd_embedding,
+    mutates_args=["output"],
+)
+
+
+direct_register_custom_op(
     op_name="qwen4_exp_ple_short_conv",
     op_func=qwen4_exp_ple_short_conv,
     mutates_args=["output"],
@@ -1109,4 +1326,6 @@ __all__ = [
     "Qwen4ExpNGramEmbedding",
     "Qwen4ExpPLEGroupedNorm",
     "Qwen4ExpPLELayer",
+    "Qwen4ExpPLESSDEmbedding",
+    "validate_qwen4_ple_ssd_config",
 ]

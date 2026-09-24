@@ -67,6 +67,7 @@ class GatedResidual(nn.Module):
         config: HyperConnectionConfig,
         use_combine: bool = True,
         prefix: str = "",
+        quant_config=None,
     ) -> None:
         super().__init__()
         self.config = config
@@ -74,6 +75,12 @@ class GatedResidual(nn.Module):
         self.hc_count = config.hc_count
         self.hidden_size = config.hidden_size
         self.use_combine = use_combine
+        self.mtp_unfused = False
+        if getattr(quant_config, "_mtp_dense_policy", None) is not None:
+            from mtp_dense import scoped_hc
+
+            self.mtp_unfused = scoped_hc(quant_config, prefix) is not None
+        hc_quant = quant_config if self.mtp_unfused else None
 
         norm_size = (
             self.hyper_hidden_size if config.hc_per_branch_norm else config.hidden_size
@@ -92,7 +99,30 @@ class GatedResidual(nn.Module):
         # The merged skinny-GEMM shape is physically padded to 16 rows for
         # alignment and efficient backend dispatch.
         self.pad_size = (-(self.lora_rank + self.hc_count)) % 16 if use_combine else 0
-        if use_combine:
+        if self.mtp_unfused:
+            self.pad_size = 0
+            self.input_mix_weight_down = ReplicatedLinear(
+                self.hyper_hidden_size,
+                self.lora_rank,
+                bias=False,
+                params_dtype=config.params_dtype,
+                quant_config=hc_quant,
+                prefix=maybe_prefix(prefix, "input_mix_weight_down"),
+                return_bias=False,
+                disable_tp=True,
+            )
+            if use_combine:
+                self.block_inject_weight = ReplicatedLinear(
+                    self.hyper_hidden_size,
+                    self.hc_count,
+                    bias=False,
+                    params_dtype=config.params_dtype,
+                    quant_config=hc_quant,
+                    prefix=maybe_prefix(prefix, "block_inject_weight"),
+                    return_bias=False,
+                    disable_tp=True,
+                )
+        elif use_combine:
             self.input_mix_weight_down_block_inject = MergedColumnParallelLinear(
                 self.hyper_hidden_size,
                 [self.lora_rank, self.hc_count]
@@ -119,9 +149,10 @@ class GatedResidual(nn.Module):
             self.hyper_hidden_size,
             bias=False,
             params_dtype=config.params_dtype,
-            quant_config=None,
+            quant_config=hc_quant,
             prefix=maybe_prefix(prefix, "input_mix_weight_up"),
             return_bias=False,
+            disable_tp=self.mtp_unfused,
         )
 
     def mix(
@@ -134,7 +165,10 @@ class GatedResidual(nn.Module):
             self.hc_count,
         )
 
-        if self.use_combine:
+        if self.mtp_unfused:
+            lora = self.input_mix_weight_down(xn)
+            injection = self.block_inject_weight(xn) if self.use_combine else None
+        elif self.use_combine:
             # produce injection logits for combine
             split_sizes = [self.lora_rank, self.hc_count, self.pad_size]
             down_and_injection = self.input_mix_weight_down_block_inject(xn)
@@ -170,7 +204,10 @@ class GatedResidual(nn.Module):
             self.hc_count,
         )
 
-        if self.use_combine:
+        if self.mtp_unfused:
+            lora = self.input_mix_weight_down(xn)
+            injection = self.block_inject_weight(xn) if self.use_combine else None
+        elif self.use_combine:
             # produce injection logits for combine
             split_sizes = [self.lora_rank, self.hc_count, self.pad_size]
             down_and_injection = self.input_mix_weight_down_block_inject(xn)

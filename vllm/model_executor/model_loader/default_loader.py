@@ -11,6 +11,7 @@ import torch
 from torch import nn
 from transformers.utils import SAFE_WEIGHTS_INDEX_NAME
 
+from vllm import envs
 from vllm.config import ModelConfig
 from vllm.config.load import LoadConfig
 from vllm.logger import init_logger
@@ -253,7 +254,24 @@ class DefaultModelLoader(BaseModelLoader):
             source.fall_back_to_pt,
             source.allow_patterns_overrides,
         )
-        if self.load_config.load_format == "npcache":
+        if envs.VLLM_QWEN4_PLE_SSD:
+            if (
+                not use_safetensors
+                or self.load_config.load_format not in ("auto", "safetensors")
+                or self.load_config.safetensors_load_strategy != "lazy"
+                or extra_config.get("enable_multithread_load")
+            ):
+                raise ValueError("PLE SSD requires single-thread lazy safetensors")
+            from vllm.models.qwen4_exp.common.ple_ssd import (
+                ple_ssd_weights_iterator,
+            )
+
+            weights_iterator = ple_ssd_weights_iterator(
+                hf_weights_files,
+                self.load_config.use_tqdm_on_load,
+                local_expert_ids=self.local_expert_ids,
+            )
+        elif self.load_config.load_format == "npcache":
             # Currently np_cache only support *.bin checkpoints
             assert use_safetensors is False
             weights_iterator = np_cache_weights_iterator(

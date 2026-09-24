@@ -158,9 +158,31 @@ class QuarkConfig(QuantizationConfig):
 
         self.quant_config = quant_config_with_hf_to_vllm_mapper
 
+    def _consumer_exclusions(self) -> list[str]:
+        exclusions = list(cast(list[str], self.quant_config.get("exclude")))
+        if self.quant_config.get("export", {}).get("file2file_pack_reorder") is False:
+            # Quark uses shell globs; the native consumer accepts exact/re:.
+            # Keep originals for the existing MoE child-prefix protection.
+            exclusions += [
+                "re:" + fnmatch.translate(pattern)
+                for pattern in exclusions
+                if not pattern.startswith("re:")
+                and any(char in pattern for char in "*?[")
+            ]
+        return exclusions
+
     def get_quant_method(
         self, layer: torch.nn.Module, prefix: str
     ) -> "QuantizeMethodBase | None":
+        if getattr(self, "_mtp_dense_policy", None) is not None:
+            from mtp_dense import MTPDenseMethod, scoped_protected, scoped_specs
+
+            if isinstance(layer, LinearBase):
+                if specs := scoped_specs(self, prefix):
+                    return MTPDenseMethod(specs)
+                if scoped_protected(self, prefix):
+                    return UnquantizedLinearMethod()
+
         weight_quant_key, activation_quant_key, method_cls = (
             self.get_quant_method_target(prefix, type(layer))
         )
@@ -216,10 +238,20 @@ class QuarkConfig(QuantizationConfig):
 
         ``None`` denotes an unquantized/BF16 activation.
         """
+        if getattr(self, "_mtp_dense_policy", None) is not None and issubclass(
+            layer_type, LinearBase
+        ):
+            from mtp_dense import MTPDenseMethod, scoped_protected, scoped_specs
+
+            if scoped_specs(self, prefix):
+                return None, None, MTPDenseMethod
+            if scoped_protected(self, prefix):
+                return None, None, UnquantizedLinearMethod
+
         is_routed_experts = issubclass(layer_type, RoutedExperts)
         if should_ignore_layer(
             prefix,
-            ignore=cast(list[str], self.quant_config.get("exclude")),
+            ignore=self._consumer_exclusions(),
             fused_mapping=self.packed_modules_mapping,
             check_children=is_routed_experts,
         ):
@@ -315,12 +347,17 @@ class QuarkConfig(QuantizationConfig):
             if q_proj_q_config is not None:
                 q_proj_q_config["output_tensors"] = None
 
-        return cls(
+        result = cls(
             quant_config=config,
             kv_cache_group=kv_cache_group,
             kv_cache_config=kv_cache_config,
             pack_method=pack_method,
         )
+        if "mixed_moe" in config:
+            from quark_mixed_moe import select_mixed_config
+
+            result = select_mixed_config(result)
+        return result
 
     @classmethod
     def get_config_filenames(cls) -> list[str]:

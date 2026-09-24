@@ -128,6 +128,12 @@ def _make_draft_vllm_config(
         raise ValueError("speculative_config.draft_model_config must be set")
 
     draft_quant_config = get_draft_quant_config(vllm_config)
+    if "mtp_dense_bridge" in getattr(draft_quant_config, "quant_config", {}):
+        from mtp_dense import configure_draft_if_requested
+
+        draft_quant_config = configure_draft_if_requested(
+            draft_quant_config, mtp_start_layer_idx
+        )
 
     # inject packed and ignored modules to the quantization config of draft model
     if draft_quant_config is not None:
@@ -196,6 +202,12 @@ class Qwen4ExpMultiTokenPredictor(nn.Module):
             vllm_config,
             self.mtp_start_layer_idx,
         )
+        self._mtp_dense_policy = getattr(
+            draft_vllm_config.quant_config, "_mtp_dense_policy", None
+        )
+        self._mtp_native_checkpoint = getattr(
+            draft_vllm_config.quant_config, "_mtp_native_checkpoint", None
+        )
         with set_current_vllm_config(draft_vllm_config, prefix=prefix):
             # residual_linear_shared fusion: fc_embedding projects the token
             # embedding, fc_hidden (shared across HC branches) projects the
@@ -252,6 +264,7 @@ class Qwen4ExpMultiTokenPredictor(nn.Module):
             hc_config,
             use_combine=False,
             prefix=maybe_prefix(prefix, "hyper_connection_mixer"),
+            quant_config=draft_vllm_config.quant_config,
         )
         self.make_empty_intermediate_tensors = make_empty_intermediate_tensors_factory(
             ["hidden_states"], self.hidden_size * self.hc_count
@@ -457,6 +470,20 @@ class Qwen4ExpMTP(nn.Module, SupportsPP, Qwen4ExpMixtureOfExperts):
         return self.logits_processor(self.lm_head, hidden_states)
 
     def load_weights(self, weights: Iterable[tuple[str, torch.Tensor]]) -> set[str]:
+        dense_loaded = set()
+        policy = getattr(self.model, "_mtp_dense_policy", None)
+        checkpoint = getattr(self.model, "_mtp_native_checkpoint", None)
+        if checkpoint is not None:
+            from mtp_checkpoint import consume_native_payloads
+
+            weights = consume_native_payloads(
+                self, weights, policy, checkpoint, dense_loaded
+            )
+        elif policy is not None:
+            from mtp_dense import consume_dense_payloads
+
+            weights = consume_dense_payloads(self, weights, policy, dense_loaded)
+
         def remap_weight_names():
             for name, weight in weights:
                 remapped_name = _remap_mtp_weight_name(name)
@@ -470,7 +497,8 @@ class Qwen4ExpMTP(nn.Module, SupportsPP, Qwen4ExpMixtureOfExperts):
             self,
             ignore_unexpected_suffixes=_QWEN4_EXP_IGNORED_MISSING_SUFFIXES.copy(),
         )
-        return loader.load_weights(remap_weight_names(), mapper=mapper)
+        loaded = loader.load_weights(remap_weight_names(), mapper=mapper)
+        return loaded | dense_loaded
 
 
 __all__ = ["Qwen4ExpMTP", "Qwen4ExpMultiTokenPredictor"]
