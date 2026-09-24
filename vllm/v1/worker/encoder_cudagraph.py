@@ -324,7 +324,10 @@ class EncoderCudaGraphManager:
             output_buffer = torch.empty_like(output)
 
         graph = torch.cuda.CUDAGraph()
+        from vllm.profiler.tracelens import graph_capture_step
+
         with (
+            graph_capture_step(token_budget, path),
             torch.inference_mode(),
             torch.cuda.graph(graph, pool=self.graph_pool, stream=current_stream()),
         ):

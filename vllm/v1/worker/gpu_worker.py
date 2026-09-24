@@ -1004,13 +1004,22 @@ class Worker(WorkerBase):
         """Let the configured profiler observe CUDA graph capture."""
         if not self.use_v2_model_runner:
             return nullcontext()
+        if self.profiler_config.profiler == "torch" and self.rank != 0:
+            return nullcontext()
         if self.profiler is None:
             model_runner = cast("GPUModelRunnerV2", self.model_runner)
             if not model_runner.needs_cudagraph_capture():
                 return nullcontext()
-            self.profiler = create_graph_capture_profiler(
+            capture_profiler = create_graph_capture_profiler(
                 self.profiler_config, global_rank=self.rank
             )
+            if self.profiler_config.profiler == "torch":
+                return (
+                    capture_profiler.capture_cuda_graphs()
+                    if capture_profiler is not None
+                    else nullcontext()
+                )
+            self.profiler = capture_profiler
             if self.profiler is None:
                 return nullcontext()
         return self.profiler.capture_cuda_graphs()

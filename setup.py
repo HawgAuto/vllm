@@ -1524,6 +1524,7 @@ rust_extensions = rust_build.rust_extensions(
 setup(
     # static metadata should rather go in pyproject.toml
     version=vllm_version,
+    py_modules=["quark_mixed_moe", "mtp_dense", "mtp_checkpoint", "native_wire_binding"],
     ext_modules=ext_modules,
     rust_extensions=rust_extensions,
     install_requires=get_requirements(),

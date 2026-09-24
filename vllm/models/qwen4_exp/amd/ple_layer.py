@@ -182,6 +182,7 @@ def _ssd_ple_lookup_or_profile_zeros(
     embedding: Qwen4ExpPLESSDEmbedding,
     ngram_ids: torch.Tensor,
 ) -> torch.Tensor:
+    # Captured producers have not run yet; only real replay may read their IDs.
     if (
         get_forward_context().attn_metadata is None
         or BreakableCUDAGraphCapture.is_active()

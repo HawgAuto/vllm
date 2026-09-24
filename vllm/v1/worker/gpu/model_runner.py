@@ -56,6 +56,7 @@ from vllm.multimodal.encoder_budget import (
     MultiModalBudget,
 )
 from vllm.platforms import current_platform
+from vllm.profiler.tracelens import capture_subsystem
 from vllm.sequence import IntermediateTensors
 from vllm.tasks import SupportedTask
 from vllm.utils.gc_utils import freeze_gc_for_cudagraph_capture
@@ -1013,29 +1014,36 @@ class GPUModelRunner(LoRAModelRunnerMixin):
 
             with self.maybe_setup_dummy_loras(self.lora_config):
                 if capture_encoder:
-                    self.model_state.encoder_runner.capture()
+                    with capture_subsystem("encoder", self.model):
+                        self.model_state.encoder_runner.capture()
 
                 if capture_decoder:
                     input_buffers = self.input_buffers
                     if self.pcp_manager is not None:
                         input_buffers = self.pcp_manager.input_buffers
-                    self.cudagraph_manager.capture(
-                        self.model,
-                        self.model_state,
-                        input_buffers,
-                        self.intermediate_tensors,
-                        self.block_tables,
-                        self.attn_groups,
-                        self.kv_cache_config,
-                        pcp_manager=self.pcp_manager,
-                        has_lora=self.lora_config is not None,
-                        use_aux_hidden_state_outputs=self.use_aux_hidden_state_outputs,
-                        lora_capture_hook=create_lora_capture_hook(
-                            self.lora_config, self
-                        ),
-                    )
+                    with capture_subsystem("decoder", self.model):
+                        self.cudagraph_manager.capture(
+                            self.model,
+                            self.model_state,
+                            input_buffers,
+                            self.intermediate_tensors,
+                            self.block_tables,
+                            self.attn_groups,
+                            self.kv_cache_config,
+                            pcp_manager=self.pcp_manager,
+                            has_lora=self.lora_config is not None,
+                            use_aux_hidden_state_outputs=(
+                                self.use_aux_hidden_state_outputs
+                            ),
+                            lora_capture_hook=create_lora_capture_hook(
+                                self.lora_config, self
+                            ),
+                        )
                     if self.speculator is not None:
-                        with use_workspace_lane(self._draft_workspace_lane):
+                        with (
+                            use_workspace_lane(self._draft_workspace_lane),
+                            capture_subsystem("speculator", self.get_draft_model()),
+                        ):
                             self.speculator.capture()
                     if self.adaptive_verification is not None:
                         with self.step_timing.collect() as timings:

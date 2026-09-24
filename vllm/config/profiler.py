@@ -273,4 +273,9 @@ class ProfilerConfig:
                 "set to 'torch'"
             )
 
+        if (
+            self.capture_torch_profiler or self.detailed_trace_annotation
+        ) and _is_uri_path(self.torch_profiler_dir):
+            raise ValueError("TraceLens execution sidecars require a local directory")
+
         return self

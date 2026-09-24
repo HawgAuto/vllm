@@ -228,6 +228,26 @@ class TorchProfilerWrapper(WorkerProfiler):
             )
 
         self._records_cpu_activity = "CPU" in activities
+        self._capture_activities = [
+            TorchProfilerActivityMap[activity] for activity in activities
+        ]
+        if torch.profiler.ProfilerActivity.CPU not in self._capture_activities:
+            self._capture_activities.insert(0, torch.profiler.ProfilerActivity.CPU)
+        if profiler_config.detailed_trace_annotation:
+            from vllm.profiler.tracelens import export_execution_metadata
+
+            raw_trace_handler = trace_handler
+
+            def detailed_trace_handler(profiler: torch.profiler.profile) -> None:
+                raw_trace_handler(profiler)
+                export_execution_metadata(
+                    profiler,
+                    torch_profiler_trace_dir,
+                    f"{worker_name}.{os.getpid()}.{uuid4().hex}",
+                )
+
+            trace_handler = detailed_trace_handler
+
         self.dump_device_time_total = (
             any(activity != "CPU" for activity in activities)
             and profiler_config.torch_profiler_dump_cuda_time_total
@@ -255,9 +275,16 @@ class TorchProfilerWrapper(WorkerProfiler):
         self._profiler_kwargs = dict(
             activities=[TorchProfilerActivityMap[activity] for activity in activities],
             schedule=profiler_schedule,
-            record_shapes=profiler_config.torch_profiler_record_shapes,
+            record_shapes=(
+                profiler_config.torch_profiler_record_shapes
+                or profiler_config.detailed_trace_annotation
+            ),
             profile_memory=profiler_config.torch_profiler_with_memory,
-            with_stack=profiler_config.torch_profiler_with_stack,
+            with_stack=(
+                profiler_config.torch_profiler_with_stack
+                or profiler_config.detailed_trace_annotation
+            ),
+            with_modules=profiler_config.detailed_trace_annotation,
             with_flops=profiler_config.torch_profiler_with_flops,
             on_trace_ready=trace_handler,
         )
@@ -389,6 +416,14 @@ class TorchProfilerWrapper(WorkerProfiler):
         if not self.should_annotate:
             return nullcontext()
         return torch.profiler.record_function(name)
+
+    @override
+    def capture_cuda_graphs(self) -> AbstractContextManager[None]:
+        if not self.profiler_config.capture_torch_profiler or self.local_rank != 0:
+            return nullcontext()
+        from vllm.profiler.tracelens import capture_session
+
+        return capture_session(self.profiler_config, self._capture_activities)
 
 
 class ProtonProfilerWrapper(WorkerProfiler):
@@ -706,9 +741,18 @@ def create_graph_capture_profiler(
 ) -> WorkerProfiler | None:
     """Create a profiler to observe CUDA graph capture, if configured.
 
-    Applies only to backends that attribute graph replay activity which
-    need a session around capture (Proton with ``proton_graph_attribution``).
+    Torch records individual captures for TraceLens. Proton retains a session
+    for graph replay attribution.
     """
+    if profiler_config.profiler == "torch" and profiler_config.capture_torch_profiler:
+        return TorchProfilerWrapper(
+            profiler_config,
+            worker_name=f"rank_{global_rank}",
+            local_rank=global_rank,
+            activities=_DEFAULT_TORCH_PROFILER_ACTIVITIES[current_platform.device_type]
+            if profiler_config.torch_profiler_activities is None
+            else tuple(profiler_config.torch_profiler_activities),
+        )
     if (
         profiler_config.profiler == "proton"
         and profiler_config.proton_graph_attribution
