@@ -71,6 +71,10 @@ from vllm.model_executor.layers.quantization.utils.quant_utils import (
     kNvfp4Dynamic,
     kNvfp4Static,
 )
+from vllm.model_executor.layers.vocab_parallel_embedding import (
+    UnquantizedEmbeddingMethod,
+    VocabParallelEmbedding,
+)
 from vllm.model_executor.models.utils import WeightsMapper
 from vllm.platforms import current_platform
 
@@ -191,6 +195,8 @@ class QuarkConfig(QuantizationConfig):
             return UnquantizedFusedMoEMethod(layer.moe_config)
         if method_cls is UnquantizedLinearMethod:
             return UnquantizedLinearMethod()
+        if method_cls is UnquantizedEmbeddingMethod:
+            return UnquantizedEmbeddingMethod()
         if method_cls is QuarkLinearMethod:
             _, _, scheme_cls = self.get_scheme_cls(type(layer), prefix)
             scheme = self.init_scheme(
@@ -225,6 +231,7 @@ class QuarkConfig(QuantizationConfig):
         type[QuantizeMethodBase]
         | type[UnquantizedLinearMethod]
         | type[UnquantizedFusedMoEMethod]
+        | type[UnquantizedEmbeddingMethod]
         | None,
     ]:
         """Return weight key, activation key, and quant method class for
@@ -249,6 +256,7 @@ class QuarkConfig(QuantizationConfig):
                 return None, None, UnquantizedLinearMethod
 
         is_routed_experts = issubclass(layer_type, RoutedExperts)
+        is_embedding = issubclass(layer_type, VocabParallelEmbedding)
         if should_ignore_layer(
             prefix,
             ignore=self._consumer_exclusions(),
@@ -257,6 +265,8 @@ class QuarkConfig(QuantizationConfig):
         ):
             if is_routed_experts:
                 return None, None, UnquantizedFusedMoEMethod
+            if is_embedding:
+                return None, None, UnquantizedEmbeddingMethod
             if issubclass(layer_type, LinearBase):
                 return None, None, UnquantizedLinearMethod
             return None, None, None
