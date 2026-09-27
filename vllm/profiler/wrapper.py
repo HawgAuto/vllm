@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
 
+import gc
 import importlib
 import inspect
 import json
@@ -85,7 +86,7 @@ class WorkerProfiler(ABC):
             self._stop()
             logger.info_once("Profiler stopped successfully.")
         except Exception as e:
-            logger.warning("Failed to stop profiler: %s", e)
+            logger.warning("Failed to stop profiler: %s", str(e))
         self._running = False  # Always mark as not running, assume stop worked
 
     def start(self) -> None:
@@ -280,10 +281,11 @@ class TorchProfilerWrapper(WorkerProfiler):
                 or profiler_config.detailed_trace_annotation
             ),
             profile_memory=profiler_config.torch_profiler_with_memory,
-            with_stack=(
-                profiler_config.torch_profiler_with_stack
-                or profiler_config.detailed_trace_annotation
-            ),
+            # Detailed iteration/shape metadata does not require Python stacks.
+            # Respect the explicit stack switch: long traces on shared-memory
+            # devices can otherwise exhaust host RAM during Kineto finalization.
+            # The config default remains True, preserving default behavior.
+            with_stack=profiler_config.torch_profiler_with_stack,
             with_modules=profiler_config.detailed_trace_annotation,
             with_flops=profiler_config.torch_profiler_with_flops,
             on_trace_ready=trace_handler,
@@ -386,6 +388,18 @@ class TorchProfilerWrapper(WorkerProfiler):
             # only print profiler results on rank 0
             if rank == 0:
                 print(table)
+
+    @override
+    def _call_stop(self) -> None:
+        try:
+            super()._call_stop()
+        finally:
+            # Export and profiler tables must finish before releasing Kineto.
+            # Its Python cycles can otherwise retain a previous chunk's event
+            # tree alongside the next one, even after replacing the profiler.
+            if hasattr(self, "profiler"):
+                del self.profiler
+            gc.collect()
 
     @override
     def _profiler_step(self) -> bool:
