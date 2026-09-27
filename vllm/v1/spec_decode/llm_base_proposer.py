@@ -1211,7 +1211,7 @@ class SpecDecodeBaseProposer:
         new_query_start_loc_np = new_query_start_loc_cpu.numpy()
         np.cumsum(new_num_tokens_per_req_np, out=new_query_start_loc_np[1:])
 
-        total_num_tokens = new_query_start_loc_np[-1]
+        total_num_tokens = int(new_query_start_loc_np[-1])
         # Example assuming num_tokens_per_req_np = [2, 4, 3]
         # this implies that `new_query_start_locs` is:
         # [0, 2, 6, 9] ->
