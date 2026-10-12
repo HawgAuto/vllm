@@ -1,2 +1,6 @@
 wheelhouse/
 __pycache__/
+# These are source-bound release inputs, not generated upstream HIP files.
+!python/direct_hip_module_v1.py
+!csrc/*.hip
+!kernels/*.so
