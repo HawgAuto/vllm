@@ -1,0 +1,114 @@
+[
+  {
+    "binary": "direct_d23_grouped.hsaco",
+    "source": "csrc/direct_d23_grouped.hip",
+    "source_sha256": "a0165ec25ddf99e376b113309067c943d4b4bfa78fd5739350dda92057185a86",
+    "binary_sha256": "3b486377eeade55f6d2356fbb92a510ef65c1fb8d33828da7bd335ee35c6d686",
+    "source_association": "accepted adjacent/build source; exact recompilation not yet qualified"
+  },
+  {
+    "binary": "direct_sdm_v2.hsaco",
+    "source": "csrc/direct_sdm_v2.hip",
+    "source_sha256": "1b6871731941b3c5a34fbc07fec1e1374cbdd7cb45b518b7dc29dbd8fd4f3f40",
+    "binary_sha256": "a20e65f271d3cef37ed85adb4a9c21eef5ac0cc0ff0fafbfa3ac6e9e774e660d",
+    "source_association": "accepted adjacent/build source; exact recompilation not yet qualified"
+  },
+  {
+    "binary": "direct_qnr_v3.hsaco",
+    "source": "csrc/direct_qnr_v3.hip",
+    "source_sha256": "daa64a55bcc9534ef0188ab143a969d2ac3247a82c1792a9d5665e07f017dd41",
+    "binary_sha256": "aa1acf2a3b2f8765a3e1a154d8e8a7a905556409587b6cdede810439f3aec2a0",
+    "source_association": "accepted adjacent/build source; exact recompilation not yet qualified"
+  },
+  {
+    "binary": "direct_moe_wna16_wmma_v13.hsaco",
+    "source": "csrc/direct_moe_wna16_wmma_v13.hip",
+    "source_sha256": "2a633c335ec841acff98f98333f8ab61f4b850c8c84b3af46bcbf06b9cee8a32",
+    "binary_sha256": "ce67d0a439960f572f8d275873a8d6f9ed3596a710a01480f25bb2e8c941a490",
+    "source_association": "accepted adjacent/build source; exact recompilation not yet qualified"
+  },
+  {
+    "binary": "direct_moe_wna16_wmma_v6w10.hsaco",
+    "source": "csrc/direct_moe_wna16_wmma_v6w10.hip",
+    "source_sha256": "955686c61b8ddbe3fa6a6667d9de2d0b0ea76aec5c18ad1b9fa0be26cc191431",
+    "binary_sha256": "2e0e23fc5f47e184cf88c98ca0dd8b3b618fe63084aa70c8446973d8b31dd153",
+    "source_association": "accepted adjacent/build source; exact recompilation not yet qualified"
+  },
+  {
+    "binary": "direct_hc_fused_v3e.hsaco",
+    "source": "csrc/direct_hc_fused_v3e.hip",
+    "source_sha256": "8513be936115104b6df4fbd42024b04845a0bd914b819244bdebf220d69ac097",
+    "binary_sha256": "5b8be446552d8c8b10108e59dd3da174f34be38ac40444fe53c44afb8cb5ed69",
+    "source_association": "accepted adjacent/build source; exact recompilation not yet qualified"
+  },
+  {
+    "binary": "direct_hc_fused_v3g.hsaco",
+    "source": "csrc/direct_hc_fused_v3g.hip",
+    "source_sha256": "5dd2cb28c7f8d5fc4d6f9fa2458055d3af2e2c4014240e13ffcc311be696dc30",
+    "binary_sha256": "940bfcdb28868c508c22b5a78611b04d1ed91b1277ef534e239a692e1a765cb9",
+    "source_association": "accepted adjacent/build source; exact recompilation not yet qualified"
+  },
+  {
+    "binary": "direct_qsa_native_v3g.hsaco",
+    "source": "csrc/direct_qsa_native_v3g.hip",
+    "source_sha256": "f718d0c600356902782e58d25cbd2baaf29122b7e2742020710b14bf3916fcfd",
+    "binary_sha256": "02ef2113d8ab0542c7cdebe0366321e2a2eaa7af0c41c4ef1633b9d32eb790a7",
+    "source_association": "accepted adjacent/build source; exact recompilation not yet qualified"
+  },
+  {
+    "binary": "direct_nb1_aux.hsaco",
+    "source": "csrc/direct_nb1_aux.hip",
+    "source_sha256": "a8a896c414500dd333330f3984f173f26d1610d89066bcb4f2370ff3a99baf31",
+    "binary_sha256": "17e0256db66d52fe216d9d2dc89fb1d76b1b502ac1371802e87e556a437a89b9",
+    "source_association": "accepted adjacent/build source; exact recompilation not yet qualified"
+  },
+  {
+    "binary": "direct_qsa_native_v3k.hsaco",
+    "source": "csrc/direct_qsa_native_v3k.hip",
+    "source_sha256": "1647b9a81eda036180322364e6e03a45217f947bf332c53c62d22bb3708567f8",
+    "binary_sha256": "4fd1d783be45a65c623a946cf177a6626395fec6b59be3d759cdfd1949ad5f6b",
+    "source_association": "accepted adjacent/build source; exact recompilation not yet qualified"
+  },
+  {
+    "binary": "direct_qsa_mqa_scores_v4.hsaco",
+    "source": "csrc/direct_qsa_mqa_scores_v4.hip",
+    "source_sha256": "77a95d66164192382baac4dd8ff240c66b515ec8a3943bfad18a430210f935db",
+    "binary_sha256": "696611cccf8ff49a3b7cfedcaf08ad5c7013467b1ea70cf23240ef3e82ec84a1",
+    "source_association": "accepted adjacent/build source; exact recompilation not yet qualified"
+  },
+  {
+    "binary": "direct_qsa_union_build_v1.hsaco",
+    "source": "csrc/direct_qsa_union_build_v1.hip",
+    "source_sha256": "c568bbdb4e31c0f6e9fd3f723d9bedfb3a50010ce176d83d4b45b325688a1d2c",
+    "binary_sha256": "530659dd9b31ddb3043fbf2623c45c011946af88786b6cdac752951dac9412bc",
+    "source_association": "accepted adjacent/build source; exact recompilation not yet qualified"
+  },
+  {
+    "binary": "direct_qsa_i1.hsaco",
+    "source": "csrc/direct_qsa_i1.hip",
+    "source_sha256": "85ddc540255081793d00580cc90fa693f0644f7e6a8c83b544bfc354630ca2dd",
+    "binary_sha256": "27e6d2c030a60f05d6a039fd1953abe3e11beab37cc18a6cbefe12b38683ef26",
+    "source_association": "accepted adjacent/build source; exact recompilation not yet qualified"
+  },
+  {
+    "binary": "direct_w8a16_skinny.so",
+    "source": "csrc/direct_w8a16_skinny.hip",
+    "source_sha256": "3edc09b9517cec66248277fc7e531cc411113f9eb91b1b4f5bea6240990e43e5",
+    "binary_sha256": "8200d09698d149fb26a201f0a82ef6b68d8900b8383a269e6be6a5b1c0ed4f15",
+    "source_association": "accepted adjacent/build source; exact recompilation not yet qualified"
+  },
+  {
+    "binary": "sdm3.hsaco",
+    "source": "csrc/sdm3.hip",
+    "source_sha256": "e87acff0725bfc2a3d9a3d26fca3221adde0f83e4f7920b65db54842c2527518",
+    "binary_sha256": "308cc7d394993524eab3f8f4c627921bfa7a9ec0bced006f67f0dcdf52d6df43",
+    "source_association": "accepted adjacent/build source; exact recompilation not yet qualified"
+  },
+  {
+    "binary": "ddn_v1.hsaco",
+    "source": "csrc/ddn_v1.hip",
+    "source_sha256": "a3a9d6f7ea1b2b0e153b3d97a653058e98524746f641726249699a0126bd162a",
+    "binary_sha256": "cfeddc3d88fb463ac81fb37bbfefa3585c4f1a7b150be0604f3bfa5c464244ef",
+    "source_association": "accepted adjacent/build source; exact recompilation not yet qualified"
+  }
+]

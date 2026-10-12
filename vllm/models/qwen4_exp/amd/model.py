@@ -78,6 +78,7 @@ from vllm.v1.kv_cache_interface import MambaSpec
 
 from ..config import ATTENTION_LAYER_TYPES, QSA_LAYER_TYPE, Qwen4ExpConfig
 from .hyperconnection import GatedResidual, HyperConnectionConfig
+import direct_w8a16 as _w8  # dense W8A16 stage 3 (inert unless DIRECT_W8A16=1)
 from .low_latency_gemm import enable_qwen4_exp_low_latency_gemm
 from .ple_layer import Qwen4ExpPLELayer
 from .qsa import Qwen4ExpQSAAttention
@@ -654,6 +655,7 @@ class Qwen4ExpForCausalLM(
         self.lm_head = ParallelLMHead(
             config.vocab_size,
             config.hidden_size,
+            quant_config=_w8.config_or_none(),  # W8A16: INT8 lm_head (shared with the MTP draft)
             prefix=maybe_prefix(prefix, "lm_head"),
         )
         self.logits_processor = LogitsProcessor(config.vocab_size)

@@ -3,6 +3,7 @@
 """GPU-resident Qwen4Exp position-learning enhancement layers."""
 
 import math
+import time
 import weakref
 from collections.abc import Iterable, Sequence
 from typing import Any
@@ -17,6 +18,7 @@ from vllm.compilation.breakable_cudagraph import (
     is_breakable_cudagraph_enabled,
 )
 from vllm.config import CacheConfig, ModelConfig, VllmConfig, get_current_vllm_config
+from vllm.compilation.monitor import is_compiled_piecewise_capture_active
 from vllm.config.compilation import CompilationMode, CUDAGraphMode
 from vllm.forward_context import get_forward_context
 from vllm.logger import init_logger
@@ -90,6 +92,58 @@ def validate_qwen4_ple_ssd_config(vllm_config: VllmConfig) -> None:
         raise ValueError("VLLM_QWEN4_PLE_SSD requires --safetensors-load-strategy=lazy")
 
 
+
+# ---- DIRECT EXACT DATA-MOVEMENT A/B selector (overlay moe-wmma-unified-v6) ----
+import json as _dx_json, os as _dx_os
+_DX_LOGGED = set()
+def _direct_dm_on(tag):
+    v = _dx_os.environ.get('DIRECT_EXACT_DM')
+    if v is not None:
+        on = v == '1'
+    else:
+        from direct_moe_ab_adapter_v1 import read_phase as _rp
+        ph = _rp()
+        on = ph is not None and ph['arm'] == 'wmma5'
+    key = (tag, on)
+    if key not in _DX_LOGGED:
+        _DX_LOGGED.add(key)
+        print('DIRECT_EXACT_DM ' + _dx_json.dumps({'site': tag, 'fast': on, 'pid': _dx_os.getpid()}), flush=True)
+    return on
+
+# ---- DIRECT exact tiled transpose (ple-transpose-01: aten strided copy 2.8-5 GB/s -> 75-250 GB/s, torch.equal) ----
+from vllm.triton_utils import tl as _dx_tl, triton as _dx_triton
+@_dx_triton.jit
+def _direct_tr12_kernel(X, Y, R, C, sxb, sxr, sxc, syb, syc, syr, BR: _dx_tl.constexpr, BC: _dx_tl.constexpr):
+    pid_c = _dx_tl.program_id(0)
+    pid_r = _dx_tl.program_id(1)
+    b = _dx_tl.program_id(2)
+    r = pid_r * BR + _dx_tl.arange(0, BR)
+    c = pid_c * BC + _dx_tl.arange(0, BC)
+    m = (r[:, None] < R) & (c[None, :] < C)
+    tile = _dx_tl.load(X + b * sxb + r[:, None].to(_dx_tl.int64) * sxr + c[None, :] * sxc, mask=m)
+    _dx_tl.store(Y + b * syb + c[None, :].to(_dx_tl.int64) * syc + r[:, None] * syr, tile, mask=m)
+_DX_SELFCHECKED = set()
+def _direct_tr12(x, BR, BC, nw):
+    """== x.transpose(1, 2).contiguous() for 3-D x (pure copy; column-tile-fastest grid).
+    First call per (BR, BC) in a process is self-checked against aten (torch.equal) and logged."""
+    y = _direct_tr12_raw(x, BR, BC, nw)
+    key = (BR, BC)
+    if key not in _DX_SELFCHECKED:
+        ref = x.transpose(1, 2).contiguous()
+        ok = bool(torch.equal(y, ref))
+        print('DIRECT_EXACT_DM_SELFCHECK ' + _dx_json.dumps({'tile': list(key), 'shape': list(x.shape), 'equal': ok, 'pid': _dx_os.getpid()}), flush=True)
+        if not ok:
+            raise RuntimeError('direct fast transpose self-check FAILED')
+        _DX_SELFCHECKED.add(key)
+    return y
+def _direct_tr12_raw(x, BR, BC, nw):
+    B, R, C = x.shape
+    y = torch.empty((B, C, R), dtype=x.dtype, device=x.device)
+    if y.numel() == 0:
+        return y
+    _direct_tr12_kernel[(_dx_triton.cdiv(C, BC), _dx_triton.cdiv(R, BR), B)](x, y, R, C, *x.stride(), *y.stride(), BR=BR, BC=BC, num_warps=nw)
+    return y
+
 class Qwen4ExpPLESSDEmbedding(nn.Module):
     """Bounded BF16 row lookup backed by a ``PLESafetensorsReader``."""
 
@@ -148,6 +202,13 @@ class Qwen4ExpPLESSDEmbedding(nn.Module):
             raise ValueError("PLE row IDs must be int32 or int64")
         if input_ids.is_cuda and torch.cuda.is_current_stream_capturing():
             raise RuntimeError("SSD PLE lookup must run outside stream capture")
+        import direct_ple_ab_v1 as _direct_ple_ab
+
+        _direct_arm, _direct_case = _direct_ple_ab.read_arm()
+        if _direct_arm != "installed":
+            return self._direct_native_forward(input_ids, _direct_arm, _direct_case)
+        if _direct_case is not None:
+            _direct_t0 = time.perf_counter()
         shape = (*input_ids.shape, self.embedding_dim)
         row_ids = input_ids.detach().reshape(-1)
         output = torch.empty(
@@ -175,6 +236,51 @@ class Qwen4ExpPLESSDEmbedding(nn.Module):
         if not self._logged_first_gather and row_ids.numel():
             logger.info("Qwen4Exp PLE SSD reader stats: %s", self.reader.stats())
             self._logged_first_gather = True
+        if _direct_case is not None:
+            _direct_ple_ab.record(
+                "installed",
+                _direct_case,
+                int(row_ids.numel()),
+                (time.perf_counter() - _direct_t0) * 1e3,
+            )
+        return output.reshape(shape)
+
+    def _direct_native_forward(
+        self, input_ids: torch.Tensor, arm: str, case: str
+    ) -> torch.Tensor:
+        """Direct-session A/B only: exact-byte native batched pread gather."""
+        import direct_ple_ab_v1 as _direct_ple_ab
+
+        started = time.perf_counter()
+        shape = (*input_ids.shape, self.embedding_dim)
+        row_ids = input_ids.detach().reshape(-1)
+        output = torch.empty(
+            (row_ids.numel(), self.embedding_dim),
+            dtype=torch.bfloat16,
+            device=input_ids.device,
+        )
+        max_batch_rows = getattr(self.reader, "max_batch_rows", 65536)
+        for start in range(0, row_ids.numel(), max_batch_rows):
+            ids = row_ids[start : start + max_batch_rows].to(
+                device="cpu", dtype=torch.int64
+            )
+            rows = _direct_ple_ab.gather_rows_native(self.reader, ids.numpy())
+            if rows.shape != (ids.numel(), self.embedding_dim):
+                raise RuntimeError("native PLE gather returned wrong shape")
+            if arm == "shadow":
+                raw = self.reader.gather_bytes(ids.tolist())
+                if raw != rows.tobytes():
+                    raise RuntimeError("native PLE shadow bytes differ from installed reader")
+            output[start : start + ids.numel()].copy_(
+                torch.from_numpy(rows).view(torch.bfloat16)
+            )
+            del rows
+        if not self._logged_first_gather and row_ids.numel():
+            logger.info("Qwen4Exp PLE SSD reader stats: %s", self.reader.stats())
+            self._logged_first_gather = True
+        _direct_ple_ab.record(
+            arm, case, int(row_ids.numel()), (time.perf_counter() - started) * 1e3
+        )
         return output.reshape(shape)
 
 
@@ -183,9 +289,12 @@ def _ssd_ple_lookup_or_profile_zeros(
     ngram_ids: torch.Tensor,
 ) -> torch.Tensor:
     # Captured producers have not run yet; only real replay may read their IDs.
+    # This holds for breakable capture and for torch.compile PIECEWISE capture,
+    # where this op is an eager split boundary between recorded producer graphs.
     if (
         get_forward_context().attn_metadata is None
         or BreakableCUDAGraphCapture.is_active()
+        or is_compiled_piecewise_capture_active()
     ):
         return torch.zeros(
             (*ngram_ids.shape, embedding.embedding_dim),
@@ -488,25 +597,59 @@ class Qwen4ExpNGramEmbedding(nn.Module):
                 f"PLE received {num_tokens} tokens, but its workspace supports "
                 f"at most {self.positions_buffer.numel()}"
             )
-        if num_reqs > self.padded_buffer.shape[0]:
+        request_capacity = self.padded_buffer.shape[0]
+        if torch.compiler.is_compiling():
+            # Keep this bound as a runtime tensor assertion. A Python branch on
+            # num_reqs turns the symbolic query_start_loc length into a guard
+            # and specializes concurrency-one graphs to length two.
+            num_reqs_tensor = (
+                query_start_loc.new_zeros(()) + query_start_loc.shape[0] - 1
+            )
+            torch._assert_async(
+                num_reqs_tensor <= request_capacity,
+                "PLE request count exceeds workspace capacity",
+            )
+        elif num_reqs > request_capacity:
             raise ValueError(
                 f"PLE received {num_reqs} requests, but its workspace supports "
-                f"at most {self.padded_buffer.shape[0]}"
+                f"at most {request_capacity}"
             )
 
         positions = self.positions_buffer[:num_tokens]
-        packed = self.padded_buffer[:num_reqs]
-        packed.fill_(self.eos_token_id)
+        # Keep request workspaces at their fixed configured capacity while
+        # compiling. Slicing a capacity-one buffer/context by the symbolic
+        # request count adds the same implicit <= 1 shape constraint that the
+        # runtime assertion above deliberately avoids. Extra workspace rows do
+        # not contribute to output: all gathers below are selected by
+        # request_indices for real input tokens.
+        if request_capacity == 1:
+            packed = self.padded_buffer[:, :num_tokens]
+            packed.fill_(self.eos_token_id)
+        else:
+            # A multi-row buffer slice changes contiguity at full capacity and
+            # specializes the dynamic token axis. Use a contiguous scratch
+            # tensor for batching; retain the accepted capacity-one path.
+            packed = input_ids.new_full(
+                (request_capacity, num_tokens), self.eos_token_id
+            )
         request_indices = torch.searchsorted(query_start_loc, positions, right=True) - 1
         request_indices.clamp_(max=num_reqs - 1)
         columns = (positions - query_start_loc[request_indices]).clamp(
             0, packed.shape[1] - 1
         )
         packed[request_indices, columns] = input_ids
-        ngram_context = ngram_context[:num_reqs].to(
+        ngram_context = ngram_context.to(
             device=input_ids.device, dtype=torch.long
         )
 
+        if request_capacity != 1:
+            # Input context contains active/padded requests, whereas packed is
+            # capacity-sized. Preserve active rows exactly; inactive rows are
+            # never selected by request_indices. This uses a fixed output shape
+            # without forcing the symbolic request count to equal capacity.
+            context_rows = torch.arange(request_capacity, device=input_ids.device)
+            context_rows = context_rows.clamp_max(ngram_context.shape[0] - 1)
+            ngram_context = ngram_context.index_select(0, context_rows)
         context = torch.cat([ngram_context, packed], dim=-1)
         positions_2d, position_in_segment = self._shift_precompute(
             context, self.eos_token_id
@@ -858,7 +1001,8 @@ class Qwen4ExpPLELayer(nn.Module, MambaBase):
 
         packed_tokens = x_p.new_zeros((num_prefills, max_len, hidden_size))
         packed_tokens[req_indices, col_indices] = x_p
-        packed_tokens = packed_tokens.transpose(1, 2).contiguous()
+        packed_tokens = (_direct_tr12(packed_tokens, 64, 256, 8) if _direct_dm_on('ple_pack')
+                         else packed_tokens.transpose(1, 2).contiguous())
 
         state_indices = state_indices_tensor_p[:num_prefills].to(
             device=conv_state.device, dtype=torch.int64
@@ -896,7 +1040,9 @@ class Qwen4ExpPLELayer(nn.Module, MambaBase):
             groups=history.size(1),
             dilation=self.short_conv_dilation,
         )
-        conv_output = F.silu(conv_output).transpose(1, 2).contiguous()
+        conv_output = F.silu(conv_output)
+        conv_output = (_direct_tr12(conv_output, 128, 128, 8) if _direct_dm_on('ple_unpack')
+                       else conv_output.transpose(1, 2).contiguous())
 
         token_positions = torch.arange(max_len, device=x_p.device, dtype=torch.int64)
         valid_tokens = token_positions.view(1, max_len) < lengths.view(num_prefills, 1)
@@ -930,6 +1076,11 @@ class Qwen4ExpPLELayer(nn.Module, MambaBase):
             )
             existing_state[..., : self.conv_state_len] = safe_next_state
             conv_state.index_copy_(0, state_indices, existing_state)
+            _direct_ck = getattr(metadata, "direct_ckpt", None)
+            if _direct_ck is not None:
+                import direct_mamba_ckpt_v1 as _direct_mamba_ckpt
+
+                _direct_mamba_ckpt.ple_export(_direct_ck, history, conv_state, self.conv_state_len)
         return output
 
     def _short_conv_dilated_spec_batched(
@@ -1330,3 +1481,16 @@ __all__ = [
     "Qwen4ExpPLESSDEmbedding",
     "validate_qwen4_ple_ssd_config",
 ]
+
+
+# --- direct campaign: internal Mamba prefill checkpoint spec (direct_mamba_ckpt_v1) ---
+_direct_orig_ple_spec = Qwen4ExpPLELayer.get_kv_cache_spec
+
+
+def _direct_ple_spec(self, vllm_config):
+    import direct_mamba_ckpt_v1 as _direct_mamba_ckpt
+
+    return _direct_mamba_ckpt.maybe_checkpoint_spec(_direct_orig_ple_spec(self, vllm_config), vllm_config)
+
+
+Qwen4ExpPLELayer.get_kv_cache_spec = _direct_ple_spec

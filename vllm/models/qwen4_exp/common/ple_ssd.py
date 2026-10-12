@@ -621,8 +621,13 @@ def ple_ssd_weights_iterator(
 ):
     """Exclude PLE before mmap, including when the draft has no PLE modules.
 
-    Inspect only bounded headers. Ordinary files use upstream lazy loading;
-    mixed files stage one non-PLE tensor at a time using buffered pread.
+    LOADFAST v2 (nb2-loadfast-v2), byte-identical stream to the image original:
+    (1) consecutive ordinary files go through ONE upstream lazy iterator call (v1);
+    (2) ordinary/mixed classification from model.safetensors.index.json; mixed files and files
+        absent from the index keep the bounded-header path; every tensor yielded from an ordinary
+        run is re-checked for PLE names (index/header disagreement raises instead of diverging);
+    (3) bounded posix_fadvise(WILLNEED) prefetch of index-ordinary files ahead of the consumer
+        (page-cache warming only; the bytes read are unchanged).
     """
     from vllm.model_executor.model_loader.weight_utils import (
         _natural_sort_key,
@@ -630,51 +635,169 @@ def ple_ssd_weights_iterator(
         should_skip_weight,
     )
 
-    for filename in sorted(hf_weights_files, key=_natural_sort_key):
-        path = Path(filename).resolve()
-        flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0)
-        flags |= getattr(os, "O_NOFOLLOW", 0)
-        fd = os.open(path, flags)
-        try:
-            stat = os.fstat(fd)
-            if not stat_module.S_ISREG(stat.st_mode):
-                raise ValueError(f"safetensors shard is not a regular file: {path}")
-            header, data_start = PLESafetensorsReader._read_header(
-                fd, path, stat.st_size
-            )
-            ple_names = {
-                name for name in header if ".ple_embedding.ngram_embedding." in name
-            }
-            for name in ple_names:
-                metadata = header[name]
-                if (
-                    not re.search(
-                        r"\.ple_embedding\.ngram_embedding\.shard_[0-9]+\.weight$",
-                        name,
-                    )
-                    or metadata["dtype"] != "BF16"
-                    or len(metadata["shape"]) != 2
-                ):
-                    raise ValueError(f"unsupported SSD PLE tensor: {name}")
-            if not ple_names:
-                yield from safetensors_weights_iterator(
-                    [str(path)],
-                    use_tqdm_on_load,
-                    "lazy",
-                    local_expert_ids=local_expert_ids,
+    order = sorted(hf_weights_files, key=_natural_sort_key)
+    paths = [Path(filename).resolve() for filename in order]
+    index = _lf2_load_index(paths)
+    known, ple_files, weight_map = index if index is not None else (set(), set(), {})
+    pf_files = [p for p in paths if p.name in known and p.name not in ple_files]
+    ordinal = {p.name: i for i, p in enumerate(pf_files)}
+    prefetch = None
+    window = int(os.environ.get("DIRECT_LF2_PREFETCH_WINDOW_BYTES", str(6 << 30)))
+    if pf_files and os.environ.get("DIRECT_LF2_PREFETCH", "1") == "1" and window > 0:
+        prefetch = _LF2Prefetch(pf_files, window)
+        prefetch.start()
+    stats = {"index": index is not None, "index_ordinary": 0, "header_path": 0, "runs": 0}
+    pending: list[str] = []
+
+    def _flush():
+        if pending:
+            run = list(pending)
+            pending.clear()
+            stats["runs"] += 1
+            for name, tensor in safetensors_weights_iterator(
+                run,
+                use_tqdm_on_load,
+                "lazy",
+                local_expert_ids=local_expert_ids,
+            ):
+                if ".ple_embedding.ngram_embedding." in name:
+                    raise ValueError(f"PLE tensor in a shard classified as ordinary: {name}")
+                if prefetch is not None:
+                    o = ordinal.get(weight_map.get(name))
+                    if o is not None:
+                        prefetch.consumer = o
+                yield name, tensor
+
+    try:
+        for path in paths:
+            if path.name in known and path.name not in ple_files:
+                st = os.stat(path, follow_symlinks=False)
+                if not stat_module.S_ISREG(st.st_mode):
+                    raise ValueError(f"safetensors shard is not a regular file: {path}")
+                stats["index_ordinary"] += 1
+                pending.append(str(path))
+                continue
+            stats["header_path"] += 1
+            flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0)
+            flags |= getattr(os, "O_NOFOLLOW", 0)
+            fd = os.open(path, flags)
+            try:
+                stat = os.fstat(fd)
+                if not stat_module.S_ISREG(stat.st_mode):
+                    raise ValueError(f"safetensors shard is not a regular file: {path}")
+                header, data_start = PLESafetensorsReader._read_header(
+                    fd, path, stat.st_size
                 )
-            else:
-                for name, metadata in header.items():
+                ple_names = {
+                    name for name in header if ".ple_embedding.ngram_embedding." in name
+                }
+                for name in ple_names:
+                    metadata = header[name]
                     if (
-                        name == "__metadata__"
-                        or name in ple_names
-                        or should_skip_weight(name, local_expert_ids)
+                        not re.search(
+                            r"\.ple_embedding\.ngram_embedding\.shard_[0-9]+\.weight$",
+                            name,
+                        )
+                        or metadata["dtype"] != "BF16"
+                        or len(metadata["shape"]) != 2
                     ):
-                        continue
-                    tensor = _pread_tensor(
-                        (metadata, fd, path, stat.st_size, data_start, stat)
-                    )
-                    yield name, tensor
-                    del tensor
-        finally:
-            os.close(fd)
+                        raise ValueError(f"unsupported SSD PLE tensor: {name}")
+                if not ple_names:
+                    pending.append(str(path))
+                else:
+                    yield from _flush()
+                    for name, metadata in header.items():
+                        if (
+                            name == "__metadata__"
+                            or name in ple_names
+                            or should_skip_weight(name, local_expert_ids)
+                        ):
+                            continue
+                        tensor = _pread_tensor(
+                            (metadata, fd, path, stat.st_size, data_start, stat)
+                        )
+                        yield name, tensor
+                        del tensor
+            finally:
+                os.close(fd)
+        yield from _flush()
+    finally:
+        if prefetch is not None:
+            prefetch.stop.set()
+            prefetch.join(timeout=5)
+            stats["prefetch"] = prefetch.summary()
+        print("DIRECT_LF2 " + json.dumps(stats, sort_keys=True), flush=True)
+
+
+def _lf2_load_index(paths):
+    parents = {p.parent for p in paths}
+    if len(parents) != 1:
+        return None
+    index_path = next(iter(parents)) / "model.safetensors.index.json"
+    try:
+        weight_map = json.loads(index_path.read_text())["weight_map"]
+    except (OSError, ValueError, KeyError):
+        return None
+    if not isinstance(weight_map, dict):
+        return None
+    known = set(weight_map.values())
+    ple_files = {f for n, f in weight_map.items() if ".ple_embedding.ngram_embedding." in n}
+    return known, ple_files, weight_map
+
+
+class _LF2Prefetch(threading.Thread):
+    """Issue posix_fadvise(WILLNEED) for ordinary shards, at most `window` bytes ahead."""
+
+    def __init__(self, files, window):
+        super().__init__(name="direct-lf2-prefetch", daemon=True)
+        self.files, self.window = files, window
+        self.consumer = 0
+        self.stop = threading.Event()
+        self.cum = [0]
+        self.issued = self.skipped = self.waits = 0
+        self.issued_bytes = 0
+        self.fadvise_s = 0.0
+        self.error = None
+        self.t0 = time.time()
+        self.t_done = None
+
+    def _size(self, k):
+        while len(self.cum) <= k + 1:
+            j = len(self.cum) - 1
+            self.cum.append(self.cum[-1] + os.stat(self.files[j]).st_size)
+        return self.cum[k + 1] - self.cum[k]
+
+    def run(self):
+        try:
+            k = 0
+            n = len(self.files)
+            while k < n and not self.stop.is_set():
+                c = min(self.consumer, n - 1)
+                if k < c:
+                    self.skipped += c - k
+                    k = c
+                    continue
+                self._size(k)
+                if self.cum[k] - self.cum[c] > self.window:
+                    self.waits += 1
+                    self.stop.wait(0.002)
+                    continue
+                t = time.perf_counter()
+                fd = os.open(self.files[k], os.O_RDONLY | getattr(os, "O_CLOEXEC", 0))
+                try:
+                    os.posix_fadvise(fd, 0, 0, os.POSIX_FADV_WILLNEED)
+                finally:
+                    os.close(fd)
+                self.fadvise_s += time.perf_counter() - t
+                self.issued += 1
+                self.issued_bytes += self.cum[k + 1] - self.cum[k]
+                k += 1
+            self.t_done = time.time()
+        except Exception as exc:  # prefetch is advisory; never affects loading
+            self.error = repr(exc)
+
+    def summary(self):
+        return {"files": len(self.files), "issued": self.issued, "issued_bytes": self.issued_bytes,
+                "skipped_overtaken": self.skipped, "window_waits": self.waits,
+                "fadvise_s": round(self.fadvise_s, 3), "window": self.window, "error": self.error,
+                "done_after_s": None if self.t_done is None else round(self.t_done - self.t0, 3)}

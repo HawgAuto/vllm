@@ -359,6 +359,10 @@ def chunk_gated_delta_rule_fwd_h(
     def grid(meta):
         return (triton.cdiv(V, meta["BV"]), N * H)
 
+    if _dh_on():
+        _dh_run(k, u, w, v_new, g, gk, h, initial_state, final_state, cu_seqlens, chunk_offsets, T, H, Hg, K, V, BT, use_exp2, N)
+        return h, v_new, final_state
+
     chunk_gated_delta_rule_fwd_kernel_h_blockdim64[grid](
         k=k,
         v=u,
@@ -380,3 +384,60 @@ def chunk_gated_delta_rule_fwd_h(
         USE_EXP2=use_exp2,
     )
     return h, v_new, final_state
+
+
+# ---- DIRECT chunk_h pinned-config A/B path (overlay moe-wmma-unified-v9) ----
+# Autotune key [H,K,V,BT] excludes T; production picks BV64/w4/s2 once. Exact screen chunk-h-configs-02: all 24 runnable
+# configs bitwise-equal; BV32/w8/s1 is 1.49-1.87x faster at T=960..12288. wmma5 arm launches the bare JIT with that config.
+import os as _dh_os, json as _dh_json
+_DH_LOGGED = set()
+_DH_CHECKED = [False]
+_DH_CFG = dict(BV=int(_dh_os.environ.get('DIRECT_CHUNK_H_BV', '32')), num_warps=int(_dh_os.environ.get('DIRECT_CHUNK_H_WARPS', '8')),
+               num_stages=int(_dh_os.environ.get('DIRECT_CHUNK_H_STAGES', '1')))
+
+
+def _dh_log(tag, **kw):
+    if tag in _DH_LOGGED:
+        return
+    _DH_LOGGED.add(tag)
+    print('DIRECT_CHUNK_H ' + _dh_json.dumps(dict(tag=tag, pid=_dh_os.getpid(), **kw), sort_keys=True, default=str), flush=True)
+
+
+def _dh_on():
+    force = _dh_os.environ.get('DIRECT_CHUNK_H_PIN')
+    if force is not None:
+        return force == '1'
+    try:
+        import direct_moe_ab_adapter_v1 as _ab
+    except Exception:
+        return False
+    ph = _ab.read_phase()
+    return ph is not None and ph['arm'] == 'wmma5'
+
+
+def _dh_launch(k, u, w, v_new, g, gk, h, h0, ht, cu_seqlens, chunk_offsets, T, H, Hg, K, V, BT, use_exp2, N):
+    jit = chunk_gated_delta_rule_fwd_kernel_h_blockdim64.fn.fn
+    BV = _DH_CFG['BV']
+    jit[(triton.cdiv(V, BV), N * H)](
+        k=k, v=u, w=w, v_new=v_new, g=g, gk=gk, h=h, h0=h0, ht=ht, cu_seqlens=cu_seqlens, chunk_offsets=chunk_offsets,
+        T=T, H=H, Hg=Hg, K=K, V=V, BT=BT, USE_EXP2=use_exp2, BV=BV,
+        USE_G=g is not None, USE_GK=gk is not None, USE_INITIAL_STATE=h0 is not None, STORE_FINAL_STATE=ht is not None,
+        SAVE_NEW_VALUE=v_new is not None, IS_VARLEN=cu_seqlens is not None,
+        num_warps=_DH_CFG['num_warps'], num_stages=_DH_CFG['num_stages'])
+
+
+def _dh_run(k, u, w, v_new, g, gk, h, h0, ht, cu_seqlens, chunk_offsets, T, H, Hg, K, V, BT, use_exp2, N):
+    _dh_launch(k, u, w, v_new, g, gk, h, h0, ht, cu_seqlens, chunk_offsets, T, H, Hg, K, V, BT, use_exp2, N)
+    if not _DH_CHECKED[0]:
+        h2 = torch.empty_like(h)
+        v2 = torch.empty_like(v_new) if v_new is not None else None
+        f2 = torch.empty_like(ht) if ht is not None else None
+        chunk_gated_delta_rule_fwd_kernel_h_blockdim64[lambda meta: (triton.cdiv(V, meta["BV"]), N * H)](
+            k=k, v=u, w=w, v_new=v2, g=g, gk=gk, h=h2, h0=h0, ht=f2, cu_seqlens=cu_seqlens, chunk_offsets=chunk_offsets,
+            T=T, H=H, Hg=Hg, K=K, V=V, BT=BT, USE_EXP2=use_exp2)
+        eq = bool(torch.equal(h, h2) and (v2 is None or torch.equal(v_new, v2)) and (f2 is None or torch.equal(ht, f2)))
+        _dh_log('selfcheck', T=int(T), equal=eq, cfg=_DH_CFG,
+                prod_cfg=str(chunk_gated_delta_rule_fwd_kernel_h_blockdim64.fn.best_config))
+        if not eq:
+            raise RuntimeError('DIRECT_CHUNK_H selfcheck mismatch vs autotuned production kernel')
+        _DH_CHECKED[0] = True

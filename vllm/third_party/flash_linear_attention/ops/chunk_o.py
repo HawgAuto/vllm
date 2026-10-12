@@ -60,7 +60,7 @@ def chunk_fwd_kernel_o(
     USE_G: tl.constexpr,
     IS_VARLEN: tl.constexpr,
 ):
-    i_v, i_t, i_bh = tl.program_id(0), tl.program_id(1), tl.program_id(2)
+    i_v, i_t, i_bh = tl.program_id(0), tl.program_id(2), tl.program_id(1)
     i_b, i_h = i_bh // H, i_bh % H
 
     if IS_VARLEN:
@@ -168,7 +168,7 @@ def chunk_fwd_o(
         o = torch.empty_like(v)
 
     def grid(meta):
-        return (triton.cdiv(V, meta["BV"]), NT, B * H)
+        return (triton.cdiv(V, meta["BV"]), B * H, NT)
 
     chunk_fwd_kernel_o[grid](
         q,

@@ -27,6 +27,13 @@ from ..common.qsa_cache import (
 )
 
 
+import os as _os
+_qnr = None
+if _os.environ.get("DIRECT_QNR_HSACO"):
+    import direct_qsa_normrope_v2 as _qnr  # decode23 qsa-normrope route v2 (exact, self-checked; off unless env set)
+    print("DIRECT_QNR_ROUTE_ACTIVE " + __import__("json").dumps({"hsaco": _os.environ["DIRECT_QNR_HSACO"], "route": "qng_r2+triton_mrope"}), flush=True)
+
+
 def apply_qsa_rope(
     rotary_emb: nn.Module,
     positions: torch.Tensor,
@@ -160,6 +167,14 @@ class QSAIndexer(nn.Module):
             dim=-1,
         )
         q = q_raw.reshape(-1, self.index_n_heads, self.index_head_dim)
+        if _qnr is not None:  # decode23 qsa-normrope-v1: one exact launch (native fallback outside scope)
+            def _native_q(q=q):
+                n = apply_qsa_rmsnorm(self.q_layernorm, q.reshape(-1, self.index_head_dim)).reshape_as(q)
+                return apply_qsa_rope(self.rotary_emb, positions, n)
+            fused = _qnr.normrope(self.q_layernorm, self.rotary_emb, q.reshape(-1, self.index_head_dim), positions,
+                                  self.index_n_heads, _native_q, ('q', self.layer_id))
+            if fused is not None:
+                return fused, token_k.reshape(-1, 1, self.index_head_dim)
         q = apply_qsa_rmsnorm(
             self.q_layernorm,
             q.reshape(-1, self.index_head_dim),
@@ -174,6 +189,15 @@ class QSAIndexer(nn.Module):
     ) -> torch.Tensor:
         """Normalize pooled K and apply the first token's exact group position."""
         keys = compressed_keys.reshape(-1, self.index_head_dim)
+        if _qnr is not None and getattr(self.rotary_emb, "mrope_section", None):  # decode23 qsa-normrope-v1
+            positions = first_rope_positions.transpose(0, 1)
+            def _native_k(keys=keys, positions=positions):
+                n = apply_qsa_rmsnorm(self.k_layernorm, keys).reshape(-1, 1, self.index_head_dim)
+                return apply_qsa_rope(self.rotary_emb, positions, n)
+            fused = _qnr.normrope(self.k_layernorm, self.rotary_emb, keys, positions, 1, _native_k,
+                                  ('k', self.layer_id))
+            if fused is not None:
+                return fused
         keys = apply_qsa_rmsnorm(self.k_layernorm, keys).reshape(
             -1, 1, self.index_head_dim
         )
@@ -261,10 +285,18 @@ class QSAIndexer(nn.Module):
     ) -> torch.Tensor:
         from .ops.qsa import qsa_select_paged_tokens
 
+        table = metadata.block_table
+        # CPU-owned actual sequence bound; never read a GPU scalar or change
+        # captured-graph geometry. Preserve room for the fixed top-k output.
+        if metadata.num_prefill_tokens > 64 and metadata.max_seq_len > 0 and not torch.cuda.is_current_stream_capturing():
+            page_size = self.compressed_key_cache.kv_cache.shape[1]
+            min_pages = (self.token_topk // self.compress_ratio + page_size - 1) // page_size
+            actual_pages = (metadata.max_seq_len + self.compress_ratio * page_size - 1) // (self.compress_ratio * page_size)
+            table = table[:, :min(table.shape[1], max(min_pages, actual_pages))]
         return qsa_select_paged_tokens(
             q,
             self.compressed_key_cache.kv_cache,
-            metadata.block_table,
+            table,
             metadata.token_to_req,
             metadata.logical_positions,
             metadata.seq_lens,

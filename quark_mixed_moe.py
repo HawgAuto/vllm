@@ -1,10 +1,11 @@
-"""Isolated candidate: Quark mixed W4A16/W8A16 -> STOCK TritonWNA16Experts.
+"""[nb2-loadfast-v3: lf1 + bounded threaded expert-piece repack, DIRECT_LF3_WORKERS] Isolated candidate: Quark mixed W4A16/W8A16 -> STOCK TritonWNA16Experts.
 
 No GPU kernel source, quantization, BF16 expert expansion or fallback. CPU test
 callback is deliberately NOT reachable from apply(). Native GPU admission and
 serving qualification are external gates. Original Quark/RDNA3 remains intact.
 """
 from dataclasses import dataclass, replace
+from direct_moe_reduction import SlotExperts, reduce_slots, fold_shared_for_reduce, fold_reduce
 import copy
 import hashlib
 import json
@@ -17,7 +18,7 @@ from vllm.model_executor.layers.fused_moe.experts.triton_moe import TritonWNA16E
 from vllm.model_executor.layers.fused_moe.oracle.int_wna16 import make_wna16_moe_quant_config
 from vllm.model_executor.layers.quantization.utils.quant_utils import kInt4Static,kInt8Static
 
-RECIPE_SHA256='023bddc128e45d56c9fc9bc8dae56dd213d3647b95739c1a23b059ae01c515d8'
+RECIPE_SHA256='aabce8b815655175f7608a356fba2a2ec1c1396c7bbd622737c7eb54e3240ffd'
 ROUTE='quark-mixed-stock-triton-wna16-v1'
 # Native file2file calls Pack_8_bits.pack(q[N,K], False). Pack_8_bits
 # transposes per_group to signed int8[K,N]; scales are saved without transpose.
@@ -149,6 +150,47 @@ def validate_tail(k,group,config):
     if k%group:
         raise ValueError('incomplete quantization group')
 
+# ---- LOADFAST v3 (nb2-loadfast-v3): bounded multi-threaded expert-piece repack ----
+import os as _lf3_os, threading as _lf3_threading, time as _lf3_time, sys as _lf3_sys
+from concurrent.futures import ThreadPoolExecutor as _Lf3Pool
+class _Lf3Exec:
+    def __init__(self,n,depth):
+        self.n=n;self.depth=depth;self.pool=_Lf3Pool(n,thread_name_prefix='lf3-repack')
+        self.sem=_lf3_threading.BoundedSemaphore(depth);self.tls=_lf3_threading.local();self.lock=_lf3_threading.Lock()
+        self.streams=[];self.futs=[];self.submitted=0;self.wait_s=0.0;self.t_first=None;self.reported=False
+    def _run(self,fn):
+        try:
+            s=getattr(self.tls,'s',None)
+            if s is None:
+                s=torch.cuda.Stream();self.tls.s=s
+                with self.lock:self.streams.append(s)
+            with torch.cuda.stream(s):fn()
+        finally:self.sem.release()
+    def _reap(self):
+        keep=[]
+        for f in self.futs:
+            if f.done():f.result()  # re-raise the first worker error (same exception object/message)
+            else:keep.append(f)
+        self.futs=keep
+    def submit(self,fn):
+        if self.t_first is None:self.t_first=_lf3_time.perf_counter()
+        t=_lf3_time.perf_counter();self.sem.acquire();self.wait_s+=_lf3_time.perf_counter()-t
+        self.futs.append(self.pool.submit(self._run,fn));self.submitted+=1
+        if len(self.futs)>=4*self.depth:self._reap()
+    def drain(self):
+        t=_lf3_time.perf_counter()
+        for f in self.futs:f.result()
+        self.futs=[]
+        for s in list(self.streams):s.synchronize()
+        torch.cuda.synchronize()
+        if not self.reported and self.submitted:
+            self.reported=True
+            print(f"DIRECT_LF3 workers={self.n} depth={self.depth} pieces={self.submitted} streams={len(self.streams)} "
+                  f"main_wait_s={self.wait_s:.3f} drain_s={_lf3_time.perf_counter()-t:.3f} "
+                  f"span_s={_lf3_time.perf_counter()-self.t_first:.3f}",file=_lf3_sys.stderr,flush=True)
+_LF3_N=int(_lf3_os.environ.get('DIRECT_LF3_WORKERS','0') or 0)
+_LF3=_Lf3Exec(_LF3_N,int(_lf3_os.environ.get('DIRECT_LF3_DEPTH',str(4*max(_LF3_N,1))))) if _LF3_N>0 else None
+
 class _Pool(torch.nn.Module):
     def __init__(self,ids,bits,device):
         super().__init__();self.bits=bits;self.global_ids=ids
@@ -158,8 +200,23 @@ class _Pool(torch.nn.Module):
             ('w2_weight',(e,2560,640//pack),torch.uint8),
             ('w13_scale',(e,1280,20),torch.float32),
             ('w2_scale',(e,2560,5),torch.float32)):
-            self.register_parameter(name,torch.nn.Parameter(torch.empty(shape,dtype=dtype,device=device),requires_grad=False))
+            # Direct final backing storage: preserve logical values and FP32 scales.
+            # W4: transpose weights+scales. W8: transpose gate/up weight only.
+            e,n,k=shape
+            strides=(n*k,1,n) if bits==4 or name=='w13_weight' else (n*k,k,1)
+            self.register_parameter(name,torch.nn.Parameter(torch.empty_strided(shape,strides,dtype=dtype,device=device),requires_grad=False))
 
+_SDM_CFG=[]
+def _sdm_cfg():
+    # Frozen per-process kernel selection from the overlay env (fail-closed if any key is missing).
+    if not _SDM_CFG:
+        import os,direct_moe_sdm_v2 as _sdm
+        _SDM_CFG.append(_sdm.Cfg(os.environ['DIRECT_SDM_HSACO'],os.environ['DIRECT_SDM_UP'],os.environ['DIRECT_SDM_DN'],int(os.environ['DIRECT_SDM_SILUV'])))
+        import json as _json,sys as _sys
+        c=_SDM_CFG[0]
+        print('DIRECT_SDM2_ROUTE_ACTIVE '+_json.dumps({'pid':os.getpid(),'hsaco':c.hsaco,'up':c.up,'dn':c.dn,'siluv':c.siluv,
+              'up_grid':list(c.up_grid),'up_block':list(c.up_block),'dn_grid':list(c.dn_grid),'dn_block':list(c.dn_block)},sort_keys=True),file=_sys.stderr,flush=True)
+    return _SDM_CFG[0]
 class QuarkMixedMoEMethod(QuarkMoEMethod):
     supported_activation_quant_keys=[None]
     supported_weight_quant_keys=[kInt4Static,kInt8Static]
@@ -223,25 +280,37 @@ class QuarkMixedMoEMethod(QuarkMoEMethod):
         if loaded_weight.device.type!='cpu':raise ValueError('loader requires bounded CPU wire tensors')
         if tuple(loaded_weight.shape)!=expected_shape or loaded_weight.dtype!=expected_dtype:
             raise ValueError(f'wrong {bits}-bit wire shape/dtype for {weight_name}')
-        if scale:
-            if not bool((torch.isfinite(loaded_weight)&(loaded_weight>0)).all()):
-                raise ValueError('scales must be finite and positive')
-            converted=loaded_weight.T.contiguous() if native_scale else loaded_weight
-            # FP32 preserved: no silent BF16 scale rounding.
-        elif bits==4:
-            # Decode one integer projection only. Source packs N, target packs K.
-            q=torch.stack([(loaded_weight>>(4*j))&15 for j in range(8)],-1).reshape(k,n)
-            signed=torch.where(q>=8,q-16,q).T
-            unsigned=(signed+8).to(torch.uint8)
-            converted=(unsigned[:,0::2]|(unsigned[:,1::2]<<4)).contiguous()
-        else:
-            converted=(loaded_weight.T.to(torch.int16)+128).to(torch.uint8).contiguous()
-        pool=layer.mixed_pools[str(bits)]
-        target=getattr(pool,('w2' if shard_id=='w2' else 'w13')+('_scale' if scale else '_weight'))[local]
-        if shard_id!='w2':target=target[:640] if shard_id=='w1' else target[640:]
-        target.copy_(converted);self._loaded.add(key)
+        # LOADFAST v3: the per-piece integer/scale work below is the lf1 sequence verbatim, wrapped in a closure.
+        # DIRECT_LF3_WORKERS=0 runs it inline (lf1 order); >0 runs it on a bounded worker pool (own HIP stream
+        # per worker). Each piece writes only its own disjoint pool slice, so completion order cannot change bytes.
+        def _lf3_piece():
+            if scale:
+                if not bool((torch.isfinite(loaded_weight)&(loaded_weight>0)).all()):
+                    raise ValueError('scales must be finite and positive')
+                converted=loaded_weight.T.contiguous() if native_scale else loaded_weight
+                # FP32 preserved: no silent BF16 scale rounding.
+            elif bits==4:
+                # Decode one integer projection only. Source packs N, target packs K.
+                # LOADFAST (nb2-loadfast-v1): identical integer op sequence, run on the pool device after one
+                # copy of the packed wire tensor (shift/and/where/sub/add/cast/or are exact on any device).
+                w=loaded_weight.to(layer.mixed_pools[str(bits)].w13_weight.device)
+                q=torch.stack([(w>>(4*j))&15 for j in range(8)],-1).reshape(k,n)
+                signed=torch.where(q>=8,q-16,q).T
+                unsigned=(signed+8).to(torch.uint8)
+                converted=(unsigned[:,0::2]|(unsigned[:,1::2]<<4)).contiguous()
+            else:
+                w=loaded_weight.to(layer.mixed_pools[str(bits)].w13_weight.device)
+                converted=(w.T.to(torch.int16)+128).to(torch.uint8).contiguous()
+            pool=layer.mixed_pools[str(bits)]
+            target=getattr(pool,('w2' if shard_id=='w2' else 'w13')+('_scale' if scale else '_weight'))[local]
+            if shard_id!='w2':target=target[:640] if shard_id=='w1' else target[640:]
+            target.copy_(converted)
+        if _LF3 is None:_lf3_piece()
+        else:_LF3.submit(_lf3_piece)
+        self._loaded.add(key)
         return True if return_success else None
     def process_weights_after_loading(self,layer):
+        if _LF3 is not None:_LF3.drain()
         if self._ready or len(self._loaded)!=self.plan.total*6:
             raise ValueError('incomplete or already processed payload: six pieces per expert required')
         for bits,ids in ((4,self.plan.four),(8,self.plan.eight)):
@@ -250,7 +319,15 @@ class QuarkMixedMoEMethod(QuarkMoEMethod):
             qc=make_wna16_moe_quant_config(pool.w13_scale,pool.w2_scale,128,bits)
             conf=replace(self.moe,num_experts=len(ids),num_local_experts=len(ids),
                          num_logical_experts=len(ids),experts_per_token=1,moe_backend='triton')
-            self.native[bits]=TritonWNA16Experts(conf,qc)
+            for name,p in pool.named_parameters():
+                e,n,k=p.shape
+                want=(n*k,1,n) if bits==4 or name=='w13_weight' else (n*k,k,1)
+                if p.stride()!=want or p.storage_offset()!=0 or p.untyped_storage().nbytes()!=p.numel()*p.element_size():
+                    raise ValueError('noncompact or unexpected direct MoE layout')
+            self.native[bits]=SlotExperts(conf,qc)
+            self.native[bits]._direct_n_contiguous=True
+            self.native[bits]._direct_warp_policy_enabled=True
+            self.native[bits]._direct_scale_broadcast_enabled=True
         self._ready=True
     def get_fused_moe_quant_config(self,layer):
         # Pool quant configs are intentionally separate. No homogeneous layer key.
@@ -258,20 +335,37 @@ class QuarkMixedMoEMethod(QuarkMoEMethod):
         return None
     def _arguments(self,layer,bits,x,global_ids):
         pool=layer.mixed_pools[str(bits)];native=self.native[bits];m=x.shape[0]
-        w13,w2,out=native.workspace_shapes(m,1280,2560,1,self.plan.total,
+        t=global_ids.shape[1] if global_ids.ndim==2 else 1
+        w13,w2,out=native.workspace_shapes(m,1280,2560,t,self.plan.total,
                                          pool.w13_weight.shape[0],None,MoEActivation.SILU)
-        return dict(output=torch.empty(out,device=x.device,dtype=x.dtype),hidden_states=x,
+        workspace2=torch.empty(w2,dtype=x.dtype,device=x.device)
+        output=(workspace2.view(-1)[:m*t*2560].view(m*t,2560) if t>1 or m>=640 else torch.empty(out,device=x.device,dtype=x.dtype))
+        return dict(output=output,hidden_states=x,
             w1=pool.w13_weight,w2=pool.w2_weight,
-            topk_weights=torch.ones((m,1),dtype=torch.float32,device=x.device),
-            topk_ids=global_ids.reshape(-1,1).contiguous(),activation=MoEActivation.SILU,
+            topk_weights=torch.ones((m,t),dtype=torch.float32,device=x.device),
+            topk_ids=global_ids.reshape(m,t).contiguous(),activation=MoEActivation.SILU,
             global_num_experts=self.plan.total,
             expert_map=getattr(layer,'mixed_lookup_'+str(bits)),
             a1q_scale=None,a2_scale=None,
             workspace13=torch.empty(w13,dtype=x.dtype,device=x.device),
-            workspace2=torch.empty(w2,dtype=x.dtype,device=x.device),
+            workspace2=workspace2,
             expert_tokens_meta=None,apply_router_weight_on_input=False)
     def _route(self,layer,x,weights,ids,invoke):
         if not self._ready:raise ValueError('mixed weights not ready')
+        # Private scalar-only successor; original fallback below is verbatim.
+        if x.device.type=='cuda' and x.shape==(1,2560) and self.plan.total==512 and set(self.native)=={4,8}:
+            import direct_scalar_route as _scalar
+            if _scalar.supported(x,ids,weights):
+                # decode23 moe-hip-v2: bit-exact HIP WMMA scalar route, 2 launches (in-kernel fail-closed guards, fused SiLU, last-arriver reduce+shared fold).
+                import direct_moe_sdm_v2 as _sdm
+                return _sdm.run(self,layer,x,weights,ids,_sdm_cfg())
+        # Opt-in multi-row verification only. Scalar M=1 and the fallback remain unchanged.
+        import os as _os
+        if _os.environ.get('DIRECT_SDM3') == '1' and x.ndim == 2 and 2 <= x.shape[0] <= 5 and self.plan.total == 512 and set(self.native) == {4,8}:
+            import direct_moe_sdm3 as _multi
+            if _multi.supported(x,ids,weights):
+                from direct_sdm3_model import run_checked
+                return run_checked(self,layer,x,weights,ids,invoke)
         if (x.ndim!=2 or x.shape[1]!=2560 or x.dtype!=torch.bfloat16
             or ids.ndim!=2 or ids.shape[0]!=x.shape[0] or ids.dtype not in (torch.int32,torch.int64)
             or weights.shape!=ids.shape or weights.dtype not in (torch.float32,torch.float16,torch.bfloat16)
@@ -295,19 +389,95 @@ class QuarkMixedMoEMethod(QuarkMoEMethod):
         torch._assert_async(((sorted_ids[:,1:]!=sorted_ids[:,:-1])|(sorted_ids[:,1:]==-1)).all(),'duplicate top-k ID')
         m,t=ids.shape
         if m*t==0:return torch.zeros_like(x)
-        expanded=x[:,None,:].expand(m,t,2560).reshape(m*t,2560).contiguous()
-        slots=None
+        direct_input=(x.device.type=='cuda' and m>=64 and 0<t<=10)
+        expanded=x if direct_input else x[:,None,:].expand(m,t,2560).reshape(m*t,2560).contiguous()
+        slots=None;pool_outputs=[]
+        fused_reduce=(x.device.type=='cuda' and m>=64 and 0<t<=10 and weights.is_contiguous() and ids.is_contiguous())
         flat=ids.reshape(-1).long().clamp(0,self.plan.total-1)
+        if fused_reduce and direct_input:
+            # Unified-pool native WMMA prefill route (benchmark arm 'wmma5' only); None keeps the original path.
+            import direct_moe_unified_v1 as _unified
+            if _unified.active(m,t):
+                slots_u=_unified.run(layer,expanded,flat.reshape(m,t),self.native)
+                if slots_u is not None:
+                    return self._direct_fold_or_reduce(slots_u,None,weights,ids,padding is not None,m,x)
         for bits in (4,8):
             if bits not in self.native:continue
             lookup=getattr(layer,'mixed_lookup_'+str(bits))
             if lookup.device!=x.device:raise ValueError('weights/lookup not on activation device')
             # Alignment maps the other precision's experts to -1; both packed
             # GEMMs write zeros for those slots without dynamic compaction.
-            kw=self._arguments(layer,bits,expanded,flat)
+            kw=self._arguments(layer,bits,expanded,flat.reshape(m,t) if direct_input else flat)
             invoke(bits,self.native[bits],kw)
-            if slots is None:slots=kw['output']
+            if fused_reduce:pool_outputs.append(kw['output'])
+            elif slots is None:slots=kw['output']
             else:slots.add_(kw['output'])
+        if fused_reduce:
+            return self._direct_fold_or_reduce(pool_outputs[0],pool_outputs[1] if len(pool_outputs)==2 else None,weights,ids,padding is not None,m,x)
+        # Native padded -1 IDs were clamped for alignment. Discard their
+        # computed values, including NaNs, before the router-weight reduction.
+        if padding is not None:
+            slots.masked_fill_((ids.reshape(-1)<0).unsqueeze(-1),0)
+        # Kernels saw unit weights, so returned per-slot values are UNWEIGHTED
+        # w.r.t. the original router. Exactly one original-weight multiplication.
+        return (slots.reshape(m,t,2560).float()*weights.float().unsqueeze(-1)).sum(1).to(x.dtype)
+    def _sdm3_reference(self,layer,x,weights,ids,invoke):
+        if not self._ready:raise ValueError('mixed weights not ready')
+        # Private scalar-only successor; original fallback below is verbatim.
+        if x.device.type=='cuda' and x.shape==(1,2560) and self.plan.total==512 and set(self.native)=={4,8}:
+            import direct_scalar_route as _scalar
+            if _scalar.supported(x,ids,weights):
+                # decode23 moe-hip-v2: bit-exact HIP WMMA scalar route, 2 launches (in-kernel fail-closed guards, fused SiLU, last-arriver reduce+shared fold).
+                import direct_moe_sdm_v2 as _sdm
+                return _sdm.run(self,layer,x,weights,ids,_sdm_cfg())
+        if (x.ndim!=2 or x.shape[1]!=2560 or x.dtype!=torch.bfloat16
+            or ids.ndim!=2 or ids.shape[0]!=x.shape[0] or ids.dtype not in (torch.int32,torch.int64)
+            or weights.shape!=ids.shape or weights.dtype not in (torch.float32,torch.float16,torch.bfloat16)
+            or ids.device!=x.device or weights.device!=x.device or ids.shape[1]>self.plan.total):
+            raise ValueError('invalid routing tensor geometry/dtype/device')
+        # Native V2 routing emits -1 for padded tokens. Only the framework's
+        # explicit per-token mask authorizes that sentinel; live/undeclared
+        # negative IDs retain the original fail-closed contract.
+        from vllm.forward_context import get_forward_context,is_forward_context_available
+        padding=get_forward_context().is_padding if is_forward_context_available() else None
+        valid=(ids>=0)&(ids<self.plan.total)
+        if padding is not None:
+            if (not isinstance(padding,torch.Tensor) or padding.ndim!=1
+                or padding.dtype!=torch.bool or padding.device!=x.device
+                or padding.shape[0]<x.shape[0]):
+                raise ValueError('invalid native padding mask geometry/dtype/device')
+            valid=valid|((ids==-1)&padding[:x.shape[0],None])
+        torch._assert_async(valid.all(),'invalid global expert ID')
+        torch._assert_async(torch.isfinite(weights).all(),'nonfinite router weights')
+        sorted_ids=ids.sort(dim=1).values
+        torch._assert_async(((sorted_ids[:,1:]!=sorted_ids[:,:-1])|(sorted_ids[:,1:]==-1)).all(),'duplicate top-k ID')
+        m,t=ids.shape
+        if m*t==0:return torch.zeros_like(x)
+        direct_input=(x.device.type=='cuda' and m>=64 and 0<t<=10)
+        expanded=x if direct_input else x[:,None,:].expand(m,t,2560).reshape(m*t,2560).contiguous()
+        slots=None;pool_outputs=[]
+        fused_reduce=(x.device.type=='cuda' and m>=64 and 0<t<=10 and weights.is_contiguous() and ids.is_contiguous())
+        flat=ids.reshape(-1).long().clamp(0,self.plan.total-1)
+        if fused_reduce and direct_input:
+            # Unified-pool native WMMA prefill route (benchmark arm 'wmma5' only); None keeps the original path.
+            import direct_moe_unified_v1 as _unified
+            if _unified.active(m,t):
+                slots_u=_unified.run(layer,expanded,flat.reshape(m,t),self.native)
+                if slots_u is not None:
+                    return self._direct_fold_or_reduce(slots_u,None,weights,ids,padding is not None,m,x)
+        for bits in (4,8):
+            if bits not in self.native:continue
+            lookup=getattr(layer,'mixed_lookup_'+str(bits))
+            if lookup.device!=x.device:raise ValueError('weights/lookup not on activation device')
+            # Alignment maps the other precision's experts to -1; both packed
+            # GEMMs write zeros for those slots without dynamic compaction.
+            kw=self._arguments(layer,bits,expanded,flat.reshape(m,t) if direct_input else flat)
+            invoke(bits,self.native[bits],kw)
+            if fused_reduce:pool_outputs.append(kw['output'])
+            elif slots is None:slots=kw['output']
+            else:slots.add_(kw['output'])
+        if fused_reduce:
+            return self._direct_fold_or_reduce(pool_outputs[0],pool_outputs[1] if len(pool_outputs)==2 else None,weights,ids,padding is not None,m,x)
         # Native padded -1 IDs were clamped for alignment. Discard their
         # computed values, including NaNs, before the router-weight reduction.
         if padding is not None:
@@ -331,13 +501,26 @@ class QuarkMixedMoEMethod(QuarkMoEMethod):
         # The exact unmodified installed class performs alignment, both GEMMs,
         # SiLU and topk1 reduction. No replacement kernels or emulation path.
         native.apply(**kw)
+    def _direct_fold_or_reduce(self,a,b,weights,ids,mask_padding,m,x):
+        # DIRECT_MOE_SHARED_FOLD: peek (never drain) the runner-owned shared output for the reduce epilogue.
+        fs=fold_shared_for_reduce(getattr(self,'_direct_fold_shared',None))
+        if fs is not None:
+            ctx,s,g=fs
+            if (s.shape==(m,2560) and s.is_contiguous() and s.dtype==torch.bfloat16 and s.device==x.device
+                    and g.shape==(m,1) and g.is_contiguous() and g.dtype==torch.bfloat16):
+                return fold_reduce(ctx,a,b,weights,ids,mask_padding,s,g)
+        return reduce_slots(a,b,weights,ids,mask_padding)
     def apply(self,layer,x,topk_weights,topk_ids,shared_experts,shared_experts_input):
         if x.device.type!='cuda':raise ValueError('production candidate requires GPU/CUDA tensor; no CPU fallback')
         if layer.apply_router_weight_on_input:raise ValueError('router-on-input is unsupported')
         # supports_internal_mk=False: stock FusedMoE runner owns SharedExperts.
         # Never run/add a shared expert once per precision pool.
         validate_outer_shared_owner(shared_experts)
-        return self._route(layer,x,topk_weights,topk_ids,self._native_call)
+        self._direct_fold_shared=shared_experts
+        try:
+            return self._route(layer,x,topk_weights,topk_ids,self._native_call)
+        finally:
+            self._direct_fold_shared=None
     def apply_cpu_test(self,layer,x,weights,ids,callback,shared_callback=None):
         """Explicit CPU test boundary. Captures native arguments; NOT dispatch."""
         if x.device.type!='cpu':raise ValueError('test callback is CPU-only')

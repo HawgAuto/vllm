@@ -19,6 +19,7 @@ from vllm.compilation.breakable_cudagraph import (
 )
 from vllm.compilation.counter import compilation_counter
 from vllm.compilation.cuda_graph import CUDAGraphStat, CUDAGraphWrapper
+from vllm.compilation.monitor import compiled_piecewise_capture
 from vllm.compilation.wrapper import TorchCompileWithNoGuardsWrapper
 from vllm.config import VllmConfig, set_current_vllm_config
 from vllm.config.compilation import CUDAGraphMode
@@ -451,8 +452,11 @@ class CudaGraphManager:
                         desc.cg_mode == CUDAGraphMode.PIECEWISE
                         and not self.use_breakable_cg
                     ):
-                        with graph_capture_step(
-                            desc.num_tokens, desc.cg_mode.name, descriptor=desc
+                        with (
+                            graph_capture_step(
+                                desc.num_tokens, desc.cg_mode.name, descriptor=desc
+                            ),
+                            compiled_piecewise_capture(),
                         ):
                             forward_fn(CUDAGraphMode.PIECEWISE)
                     else:

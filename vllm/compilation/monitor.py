@@ -102,3 +102,24 @@ def validate_cudagraph_capturing_enabled() -> None:
 def set_cudagraph_capturing_enabled(enabled: bool) -> None:
     global cudagraph_capturing_enabled
     cudagraph_capturing_enabled = enabled
+
+
+# Depth of torch.compile PIECEWISE capture forwards in progress. Captured
+# producer graphs are recorded, not executed, while eager split ops between
+# them still run; such ops must not dereference producer outputs.
+_compiled_piecewise_capture_depth: int = 0
+
+
+@contextlib.contextmanager
+def compiled_piecewise_capture() -> Generator[None, None, None]:
+    """Mark one compiled PIECEWISE capture forward (not warmup, not replay)."""
+    global _compiled_piecewise_capture_depth
+    _compiled_piecewise_capture_depth += 1
+    try:
+        yield
+    finally:
+        _compiled_piecewise_capture_depth -= 1
+
+
+def is_compiled_piecewise_capture_active() -> bool:
+    return _compiled_piecewise_capture_depth > 0

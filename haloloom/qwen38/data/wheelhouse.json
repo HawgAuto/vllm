@@ -1,0 +1,78 @@
+{
+  "schema": "haloloom.qwen38.wheelhouse.v1",
+  "native_vllm_source": "21ee743f474a35a056e8d5ade2c9aa744e726e6e",
+  "native_extensions_match_accepted_image": 8,
+  "base_image": "ghcr.io/hawgauto/haloloom-vllm-full-gfx1151@sha256:3f80b2e086010a8d5c3c89ed236318f38a2ad3549170799765e29844e3800139",
+  "wheels": [
+    {
+      "file": "amd_aiter-0.1.1.dev64+g8449f416b-cp314-cp314-linux_x86_64.whl",
+      "bytes": 137005368,
+      "sha256": "a65cb0ca798a6f53974acfda7edc20a12d30fa8de774ad9dd577d71f57de6b45"
+    },
+    {
+      "file": "apache_tvm_ffi-0.1.10-cp312-abi3-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl",
+      "bytes": 2568064,
+      "sha256": "e3b4e53a333d61457232610319d0f1b056a24a3191d2dfe72c98c3600cfb3dcf"
+    },
+    {
+      "file": "conch_triton_kernels-1.2.1-py3-none-any.whl",
+      "bytes": 96165,
+      "sha256": "d1c80adb836cc892e2f9dde8fb00166680b417d2b58083064ed37f8616173ad1"
+    },
+    {
+      "file": "flash_attn-2.8.4-py3-none-any.whl",
+      "bytes": 209081,
+      "sha256": "b9c1fa894b39a97ff39061bed308e17d954b03c4dc4ed50df6af07602a521d65"
+    },
+    {
+      "file": "flydsl-0.3.4.1-cp314-cp314-manylinux_2_27_x86_64.whl",
+      "bytes": 76385832,
+      "sha256": "0dc70f6bb3ac2fd91c3c63c17fcf90166f70346ee97ddd5c3345b6c59ccad243"
+    },
+    {
+      "file": "huggingface_hub-1.31.0-py3-none-any.whl",
+      "bytes": 799708,
+      "sha256": "754e6e8beb425812061a3c0030aaf2ba22622b4a3254fb53166ef250effc260b"
+    },
+    {
+      "file": "humanize-4.16.0-py3-none-any.whl",
+      "bytes": 137246,
+      "sha256": "309ce952ed04f4a8d855626fcbe97d43a1336f6490a66f1a1d65b188bc4648fa"
+    },
+    {
+      "file": "ml_dtypes-0.6.0-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "bytes": 409595,
+      "sha256": "d15e788ac17b111368c1e888be3cbd0856633ff415ade22f58c813b132e8f4f8"
+    },
+    {
+      "file": "runai_model_streamer-0.15.7-py3-none-manylinux2014_x86_64.whl",
+      "bytes": 608382,
+      "sha256": "39c69b213b80e8207fbd3cde990d90bfbf99f372de4f2a554d34a983bd0b2777"
+    },
+    {
+      "file": "tenacity-9.1.4-py3-none-any.whl",
+      "bytes": 28941,
+      "sha256": "76a14c9153b249511a71d2d042f78a60c4f2dc9391bcb62fa912fd67234848f2"
+    },
+    {
+      "file": "tilelang-0.1.10-cp38-abi3-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "bytes": 49601205,
+      "sha256": "259269f83c225047b0d518377e1c4bcab353fa3993589f0d0013101d7a7ec5ed"
+    },
+    {
+      "file": "vllm-0.29.1.dev0+qwen38.21ee743f4.rocm100-cp314-cp314-linux_x86_64.whl",
+      "bytes": 72424385,
+      "sha256": "d8887c15616c9be31055de982eb2f0555c515d2ec561d8bc7623e48b97ac0a86"
+    },
+    {
+      "file": "xgrammar-0.2.7-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "bytes": 1263848,
+      "sha256": "42d6cfc051d1d38ce686221df7e8aff64f3868102cc20604cacd23bc2248d9dd"
+    },
+    {
+      "file": "z3_solver-4.15.4.0-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "bytes": 29267575,
+      "sha256": "4b3b6682a9f30138199a59ac884cfb7ef6f94989db0a51ba6fcbb6d91385c2cb"
+    }
+  ]
+}

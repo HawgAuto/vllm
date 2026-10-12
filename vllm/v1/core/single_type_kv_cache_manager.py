@@ -2048,9 +2048,21 @@ class MambaManager(SingleTypeKVCacheManager):
             blocks = self.req_to_blocks[request.request_id]
             assert 0 <= checkpoint_idx < len(blocks)
             checkpoint_block = blocks[checkpoint_idx]
+            # DIRECT FIX (mamba-prefill-ckpt-v1): the coordinator rounds
+            # ``num_tokens`` down to the scheduler block size before calling us
+            # (``_align_cacheable``), so ``num_tokens < num_prompt_tokens`` is
+            # also true on the prompt's FINAL chunk whenever the prompt is not
+            # block-aligned, which evicted the replay-boundary checkpoint that
+            # retention 0 exists to keep. Transient means: below the prompt's
+            # own checkpoint position (same prefill_end the scheduler uses).
+            final_checkpoint_position = get_mamba_prefill_checkpoint_position(
+                max(request.num_prompt_tokens, request.num_tokens - 1),
+                self.block_pool.hash_block_size,
+                self.drop_eagle_checkpoint_block,
+            )
             if (
                 retention_interval == 0
-                and num_tokens < request.num_prompt_tokens
+                and checkpoint_position < final_checkpoint_position
                 and checkpoint_position != request.shared_prefix_boundary
             ):
                 # retention_interval == 0 keeps this transient checkpoint

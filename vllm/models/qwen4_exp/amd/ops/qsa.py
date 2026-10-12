@@ -5,12 +5,20 @@
 from __future__ import annotations
 
 import math
+import os
+_DIRECT_MTP_PBOUND = os.environ.get("DIRECT_QSA_MTP_PBOUND") == "1"
 
 import torch
+
+try:  # [nb2-mqa4-ab-v1]
+    import direct_qsa_mqa_native_v1 as _MQA_NATIVE
+except ImportError:
+    _MQA_NATIVE = None
 
 from vllm import _custom_ops as ops
 from vllm.platforms import current_platform
 from vllm.triton_utils import HAS_TRITON, tl, triton
+from direct_qsa_canonical import canonicalize_selected_blocks as _direct_canonicalize_selected_blocks
 
 _LOGITS_WORKSPACE_BYTES = 128 * 1024 * 1024
 _TOPK_WORKSPACE_BYTES = 1024 * 1024
@@ -88,23 +96,25 @@ def _qsa_mqa_paged_kernel(
     safe_physical_page = tl.maximum(physical_page, 0).to(tl.int64)
     score = tl.zeros((BLOCK_N,), dtype=tl.float32)
 
-    for head in tl.static_range(0, NUM_HEADS):
-        query = tl.load(
-            q_ptr + row * stride_q_row + head * stride_q_head + dims * stride_q_dim,
-            mask=dims < HEAD_DIM,
-            other=0.0,
-        ).to(tl.float32)
-        keys = tl.load(
-            k_cache_ptr
-            + safe_physical_page[:, None] * stride_cache_block
-            + page_offset[:, None] * stride_cache_token
-            + dims[None, :] * stride_cache_dim,
-            mask=valid[:, None] & (dims[None, :] < HEAD_DIM),
-            other=0.0,
-        ).to(tl.float32)
-        dot = tl.sum(keys * query[None, :], axis=1)
-        score += tl.maximum(dot, 0.0)
-
+    # A masked-out tile cannot contribute to any selected token.
+    # Retain exact FP32 arithmetic on live tiles and -inf on the others.
+    if tl.program_id(1) * BLOCK_N < visible and request >= 0 and request < num_requests:
+        for head in tl.static_range(0, NUM_HEADS):
+            query = tl.load(
+                q_ptr + row * stride_q_row + head * stride_q_head + dims * stride_q_dim,
+                mask=dims < HEAD_DIM,
+                other=0.0,
+            ).to(tl.float32)
+            keys = tl.load(
+                k_cache_ptr
+                + safe_physical_page[:, None] * stride_cache_block
+                + page_offset[:, None] * stride_cache_token
+                + dims[None, :] * stride_cache_dim,
+                mask=valid[:, None] & (dims[None, :] < HEAD_DIM),
+                other=0.0,
+            ).to(tl.float32)
+            dot = tl.sum(keys * query[None, :], axis=1)
+            score += tl.maximum(dot, 0.0)
     score /= score_divisor
     tl.store(
         logits_ptr + row * stride_logits_row + columns,
@@ -220,9 +230,10 @@ def _qsa_sparse_paged_gqa_splitk_kernel(
     NUM_TILES: tl.constexpr,
     BLOCK_M: tl.constexpr,
     BLOCK_N: tl.constexpr,
+    SWIZZLE: tl.constexpr,
 ) -> None:
-    row = tl.program_id(0)
-    kv_head = tl.program_id(1)
+    row = tl.program_id(1) if SWIZZLE else tl.program_id(0)
+    kv_head = tl.program_id(0) if SWIZZLE else tl.program_id(1)
     split_id = tl.program_id(2)
     request = tl.load(token_to_req_ptr + row)
     safe_request = tl.minimum(tl.maximum(request, 0), num_requests - 1)
@@ -308,6 +319,184 @@ def _qsa_sparse_paged_gqa_splitk_kernel(
         )
         normalizer = normalizer * alpha + tl.sum(probabilities, axis=1)
         max_value = next_max
+
+    has_values = normalizer > 0
+    normalized_output = tl.where(
+        has_values[:, None],
+        accumulator / tl.maximum(normalizer[:, None], 1.0e-20),
+        0.0,
+    )
+    output_mask = head_offsets[:, None] < GROUP_SIZE
+    if NUM_SPLITS == 1:
+        tl.store(
+            output_ptr
+            + row * stride_output_row
+            + (first_head + head_offsets[:, None]) * stride_output_head
+            + dim_offsets[None, :],
+            normalized_output,
+            mask=output_mask,
+        )
+    else:
+        partial_lse = tl.where(
+            has_values,
+            max_value + tl.math.log2(tl.maximum(normalizer, 1.0e-20)),
+            -float("inf"),
+        )
+        tl.store(
+            partial_output_ptr
+            + (
+                (split_id * num_rows + row) * NUM_QUERY_HEADS
+                + first_head
+                + head_offsets[:, None]
+            )
+            * HEAD_DIM
+            + dim_offsets[None, :],
+            normalized_output,
+            mask=output_mask,
+        )
+        tl.store(
+            partial_lse_ptr
+            + (split_id * num_rows + row) * NUM_QUERY_HEADS
+            + first_head
+            + head_offsets,
+            partial_lse,
+            mask=head_offsets < GROUP_SIZE,
+        )
+
+
+@triton.jit
+def _qsa_sparse_paged_gqa_prefixbound_kernel(
+    q_ptr,
+    k_cache_ptr,
+    v_cache_ptr,
+    indices_ptr,
+    block_table_ptr,
+    token_to_req_ptr,
+    partial_output_ptr,
+    partial_lse_ptr,
+    output_ptr,
+    stride_q_row,
+    stride_q_head,
+    stride_k_block,
+    stride_k_token,
+    stride_k_head,
+    stride_v_block,
+    stride_v_token,
+    stride_v_head,
+    stride_indices_row,
+    stride_table_req,
+    stride_output_row,
+    stride_output_head,
+    num_rows,
+    num_cache_blocks,
+    num_requests,
+    TOPK: tl.constexpr,
+    PAGE_SIZE: tl.constexpr,
+    PAGE_TABLE_WIDTH: tl.constexpr,
+    GROUP_SIZE: tl.constexpr,
+    HEAD_DIM: tl.constexpr,
+    NUM_QUERY_HEADS: tl.constexpr,
+    NUM_SPLITS: tl.constexpr,
+    NUM_TILES: tl.constexpr,
+    BLOCK_M: tl.constexpr,
+    BLOCK_N: tl.constexpr,
+    SWIZZLE: tl.constexpr,
+) -> None:
+    row = tl.program_id(1) if SWIZZLE else tl.program_id(0)
+    kv_head = tl.program_id(0) if SWIZZLE else tl.program_id(1)
+    split_id = tl.program_id(2)
+    request = tl.load(token_to_req_ptr + row)
+    safe_request = tl.minimum(tl.maximum(request, 0), num_requests - 1)
+
+    # Exact metadata-only pruning: retain every nonnegative prefix ID and tail.
+    tl.static_assert(NUM_SPLITS == 1 and NUM_TILES == 33 and BLOCK_N == 64 and TOPK == 2051)
+    prefix_columns = tl.arange(0, (NUM_TILES - 1) * BLOCK_N)
+    prefix_tokens = tl.load(indices_ptr + row * stride_indices_row + prefix_columns)
+    prefix_tiles = (tl.max(tl.where(prefix_tokens >= 0, prefix_columns, -1), axis=0) + BLOCK_N) // BLOCK_N
+
+    head_offsets = tl.arange(0, BLOCK_M)
+    dim_offsets = tl.arange(0, HEAD_DIM)
+    column_offsets = tl.arange(0, BLOCK_N)
+    first_head = kv_head * GROUP_SIZE
+    query = tl.load(
+        q_ptr
+        + row * stride_q_row
+        + (first_head + head_offsets[:, None]) * stride_q_head
+        + dim_offsets[None, :],
+        mask=head_offsets[:, None] < GROUP_SIZE,
+        other=0.0,
+    )
+
+    max_value = tl.full((BLOCK_M,), -1.0e20, dtype=tl.float32)
+    normalizer = tl.zeros((BLOCK_M,), dtype=tl.float32)
+    accumulator = tl.zeros((BLOCK_M, HEAD_DIM), dtype=tl.float32)
+    softmax_scale_log2: tl.constexpr = (HEAD_DIM**-0.5) * 1.4426950408889634
+
+    # Dynamic bounds avoid padded main-loop iterations for uneven splits.
+    split_tile_start = split_id * NUM_TILES // NUM_SPLITS
+    split_tile_end = (split_id + 1) * NUM_TILES // NUM_SPLITS
+    for compact_tile in range(prefix_tiles + 1):
+        tile = tl.where(compact_tile < prefix_tiles, compact_tile, NUM_TILES - 1)
+        columns = tile * BLOCK_N + column_offsets
+        logical_token = tl.load(
+            indices_ptr + row * stride_indices_row + columns,
+            mask=columns < TOPK,
+            other=-1,
+        )
+        safe_token = tl.maximum(logical_token, 0)
+        logical_page = safe_token // PAGE_SIZE
+        page_offset = safe_token % PAGE_SIZE
+        valid = (
+            (request >= 0)
+            & (request < num_requests)
+            & (logical_token >= 0)
+            & (logical_page < PAGE_TABLE_WIDTH)
+        )
+        physical_page = tl.load(
+            block_table_ptr
+            + safe_request * stride_table_req
+            + tl.minimum(logical_page, PAGE_TABLE_WIDTH - 1),
+            mask=valid,
+            other=-1,
+        )
+        valid &= (physical_page >= 0) & (physical_page < num_cache_blocks)
+        if tl.sum(valid.to(tl.int32), axis=0) > 0:
+            # physical_page * block stride can overflow int32 for large caches.
+            safe_page = tl.maximum(physical_page, 0).to(tl.int64)
+            keys = tl.load(
+                k_cache_ptr
+                + safe_page[None, :] * stride_k_block
+                + page_offset[None, :] * stride_k_token
+                + kv_head * stride_k_head
+                + dim_offsets[:, None],
+                mask=valid[None, :],
+                other=0.0,
+            )
+            scores = tl.dot(query, keys)
+            # Scaling scores avoids re-quantizing a scaled query to BF16.
+            scores *= softmax_scale_log2
+            scores = tl.where(valid[None, :], scores, -1.0e20)
+            next_max = tl.maximum(max_value, tl.max(scores, axis=1))
+            alpha = tl.math.exp2(max_value - next_max)
+            probabilities = tl.where(
+                valid[None, :], tl.math.exp2(scores - next_max[:, None]), 0.0
+            )
+            values = tl.load(
+                v_cache_ptr
+                + safe_page[:, None] * stride_v_block
+                + page_offset[:, None] * stride_v_token
+                + kv_head * stride_v_head
+                + dim_offsets[None, :],
+                mask=valid[:, None],
+                other=0.0,
+            )
+            accumulator = tl.dot(
+                probabilities.to(values.dtype),
+                values,
+                acc=accumulator * alpha[:, None],
+            )
+            normalizer = normalizer * alpha + tl.sum(probabilities, axis=1)
+            max_value = next_max
 
     has_values = normalizer > 0
     normalized_output = tl.where(
@@ -631,6 +820,13 @@ def qsa_mqa_paged(
     visible_blocks = torch.empty(q.shape[0], dtype=torch.int32, device=q.device)
     if not q.shape[0] or not columns:
         return logits, visible_blocks
+    # The HIP specialization has no request-count or page-table-row-stride ABI.
+    # Multi-request tables must use the request-aware Triton kernel below.
+    if page_table.shape[0] == 1 and _MQA_NATIVE is not None and _MQA_NATIVE.enabled() and _MQA_NATIVE.eligible(
+            q, k_cache, page_table, token_to_req, query_positions, sequence_lengths):
+        _MQA_NATIVE.run(q, k_cache, page_table, token_to_req, query_positions, sequence_lengths, visible_blocks, logits,
+                        columns, compress_ratio, float(score_divisor))
+        return logits, visible_blocks
     block_n = 32
     _qsa_mqa_paged_kernel[(q.shape[0], triton.cdiv(columns, block_n))](
         q,
@@ -804,6 +1000,7 @@ def qsa_select_paged_tokens(
                 logits.stride(1),
                 block_topk,
             )
+        _direct_canonicalize_selected_blocks(blocks, logits, visible_blocks)
         expand_qsa_block_indices_cuda(
             blocks,
             query_positions[row_slice],
@@ -881,6 +1078,21 @@ def qsa_sparse_paged_attention(
     # stage keeps the wide TP4 tile within that shared-memory budget.
     partial_stages = 1 if current_platform.is_rocm() else 2
 
+    # Direct-session candidate: same kernel/dtypes; gfx1151 launch only.
+    if (current_platform.is_rocm() and base_programs > 512
+        and head_dim == 256 and group_size == 12
+        and torch.cuda.get_device_properties(q.device).gcnArchName.split(':')[0] == 'gfx1151'):
+        block_n, target_splits, partial_warps, partial_stages = 64, 1, 4, 1
+
+    # Scoped candidate: bypass wholly invalid physical tiles, retain nonempty math.
+    emptytile = (_DIRECT_MTP_PBOUND and q.shape[0] in (1600, 2494)
+               and q.shape[1:] == (24, 256) and k_cache.shape[1:] == (1600, 2, 256)
+               and block_table.shape == (1, 82) and logical_indices.shape[1] == 2051
+               and current_platform.is_rocm()
+               and torch.cuda.get_device_properties(q.device).gcnArchName.split(':')[0] == 'gfx1151')
+    if emptytile:
+        assert (block_n, target_splits, partial_warps, partial_stages) == (64, 1, 4, 1)
+
     num_tiles = triton.cdiv(logical_indices.shape[1], block_n)
     # Avoid empty splits when the selection width is smaller than the profile.
     max_useful_splits = 1 << (num_tiles.bit_length() - 1)
@@ -902,8 +1114,10 @@ def qsa_sparse_paged_attention(
             device=q.device,
         )
 
-    partial_grid = (q.shape[0], k_cache.shape[2], num_splits)
-    _qsa_sparse_paged_gqa_splitk_kernel[partial_grid](
+    swizzle = q.shape[0] > 256
+    partial_grid = (k_cache.shape[2], q.shape[0], num_splits) if swizzle else (q.shape[0], k_cache.shape[2], num_splits)
+    selected_kernel = _qsa_sparse_paged_gqa_prefixbound_kernel if emptytile else _qsa_sparse_paged_gqa_splitk_kernel
+    launched = selected_kernel[partial_grid](
         q,
         k_cache,
         v_cache,
@@ -936,11 +1150,24 @@ def qsa_sparse_paged_attention(
         NUM_QUERY_HEADS=q.shape[1],
         NUM_SPLITS=num_splits,
         NUM_TILES=num_tiles,
+        SWIZZLE=swizzle,
         BLOCK_M=block_m,
         BLOCK_N=block_n,
         num_warps=partial_warps,
         num_stages=partial_stages,
     )
+    if emptytile:
+        import json, time
+        assert launched.metadata.num_warps == 4 and launched.metadata.num_stages == 1
+        print('DIRECT_QSA_PBOUND ' + json.dumps({
+            'unix_ns':time.time_ns(), 'pid':os.getpid(), 'rows':q.shape[0], 'grid':list(partial_grid), 'swizzle':swizzle,
+            'query_heads':q.shape[1], 'head_dim':q.shape[2], 'kv_heads':k_cache.shape[2],
+            'page':k_cache.shape[1], 'page_table':list(block_table.shape),
+            'block_m':block_m, 'block_n':block_n, 'splits':num_splits,
+            'warps':launched.metadata.num_warps, 'stages':launched.metadata.num_stages,
+            'kernel':launched.metadata.name, 'registers':launched.n_regs,
+            'spills':launched.n_spills,
+        }), flush=True)
     if num_splits == 1:
         return out
 

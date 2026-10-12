@@ -134,11 +134,12 @@ def _hc_gate_mix_kernel(
     HC: tl.constexpr,
     BLOCK_SIZE: tl.constexpr,
     launch_pdl: tl.constexpr,
+    SWIZZLE: tl.constexpr = False,
 ) -> None:
     HC_DIM: tl.constexpr = DIM // HC
 
-    row = tl.program_id(0)
-    tile_id = tl.program_id(1)
+    row = tl.program_id(1) if SWIZZLE else tl.program_id(0)
+    tile_id = tl.program_id(0) if SWIZZLE else tl.program_id(1)
     offs_inner = tile_id * BLOCK_SIZE + tl.arange(0, BLOCK_SIZE)
     mask = offs_inner < HC_DIM
 
@@ -170,7 +171,7 @@ def _hc_gate_mix(x: torch.Tensor, gate: torch.Tensor, hc_count: int) -> torch.Te
     HC_DIM = DIM // hc_count
     out = x.new_empty(N, HC_DIM)
     BLOCK_SIZE = 512
-    _hc_gate_mix_kernel[(N, triton.cdiv(HC_DIM, BLOCK_SIZE))](
+    _hc_gate_mix_kernel[(triton.cdiv(HC_DIM, BLOCK_SIZE), N) if N >= 64 else (N, triton.cdiv(HC_DIM, BLOCK_SIZE))](
         x,
         gate,
         out,
@@ -181,6 +182,7 @@ def _hc_gate_mix(x: torch.Tensor, gate: torch.Tensor, hc_count: int) -> torch.Te
         hc_count,
         BLOCK_SIZE,
         launch_pdl=current_platform.is_arch_support_pdl(),
+        SWIZZLE=N >= 64,
     )
     return out
 
@@ -199,11 +201,12 @@ def _hc_combine_kernel(
     HC: tl.constexpr,
     BLOCK_SIZE: tl.constexpr,
     launch_pdl: tl.constexpr,
+    SWIZZLE: tl.constexpr = False,
 ) -> None:
     HC_PAD: tl.constexpr = triton.next_power_of_2(HC)
 
-    row = tl.program_id(0)
-    tile_id = tl.program_id(1)
+    row = tl.program_id(1) if SWIZZLE else tl.program_id(0)
+    tile_id = tl.program_id(0) if SWIZZLE else tl.program_id(1)
 
     offs_inner = tile_id * BLOCK_SIZE + tl.arange(0, BLOCK_SIZE)
     mask_inner = offs_inner < HC_DIM
@@ -246,7 +249,7 @@ def _hc_combine(
 
     out = residual.new_empty(residual.shape)
     BLOCK_SIZE = 512
-    _hc_combine_kernel[(N, triton.cdiv(hc_dim, BLOCK_SIZE))](
+    _hc_combine_kernel[(triton.cdiv(hc_dim, BLOCK_SIZE), N) if N >= 64 else (N, triton.cdiv(hc_dim, BLOCK_SIZE))](
         block_output,
         residual,
         injection_logits,
@@ -259,6 +262,7 @@ def _hc_combine(
         hc_count,
         BLOCK_SIZE,
         launch_pdl=current_platform.is_arch_support_pdl(),
+        SWIZZLE=N >= 64,
     )
     return out
 
@@ -282,13 +286,14 @@ def _hc_combine_norm_kernel(
     EPS: tl.constexpr,
     BLOCK_SIZE: tl.constexpr,
     launch_pdl: tl.constexpr,
+    SWIZZLE: tl.constexpr = False,
 ) -> None:
     HC_PAD: tl.constexpr = triton.next_power_of_2(HC)
     NUM_TILES: tl.constexpr = triton.cdiv(HC_DIM, BLOCK_SIZE)
     NUM_TILES_PAD: tl.constexpr = triton.next_power_of_2(NUM_TILES)
 
-    row = tl.program_id(0)
-    stream = tl.program_id(1)
+    row = tl.program_id(1) if SWIZZLE else tl.program_id(0)
+    stream = tl.program_id(0) if SWIZZLE else tl.program_id(1)
     offs_hc = tl.arange(0, HC_PAD)
     mask_hc = offs_hc < HC
     tile_ids = tl.arange(0, NUM_TILES_PAD)
@@ -353,7 +358,7 @@ def _hc_combine_norm(
     out = residual.new_empty(residual.shape)
     y = residual.new_empty(residual.shape)
     BLOCK_SIZE = 512
-    _hc_combine_norm_kernel[(N, hc_count)](
+    _hc_combine_norm_kernel[(hc_count, N) if N >= 64 else (N, hc_count)](
         block_output,
         residual,
         injection_logits,
@@ -371,6 +376,7 @@ def _hc_combine_norm(
         EPS=eps,
         BLOCK_SIZE=BLOCK_SIZE,
         launch_pdl=current_platform.is_arch_support_pdl(),
+        SWIZZLE=N >= 64,
     )
     return out, y
 

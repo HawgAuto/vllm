@@ -4,11 +4,12 @@
 
 from __future__ import annotations
 
-from typing import ClassVar, cast
+from typing import Optional, ClassVar, cast
 
 import torch
 from torch import nn
 
+from vllm._custom_ops import reshape_and_cache_flash
 from vllm.config import VllmConfig
 from vllm.config.cache import CacheDType
 from vllm.distributed import get_tensor_model_parallel_world_size
@@ -40,7 +41,6 @@ from vllm.v1.attention.backend import (
     AttentionType,
     MultipleOf,
 )
-from vllm.v1.attention.backends.fa_utils import is_flash_attn_varlen_func_available
 from vllm.v1.attention.backends.flash_attn import (
     FlashAttentionBackend,
     FlashAttentionImpl,
@@ -56,6 +56,12 @@ from vllm.v1.kv_cache_interface import (
 from ..common.qsa_cache import QSAForwardMetadata
 from . import model
 from .indexer_qsa import QSAIndexer
+
+
+import os as _gl_os
+_GL_GATE_LATE = _gl_os.environ.get("DIRECT_QSA_GATE_LATE") == "1"
+_GF_ON = _gl_os.environ.get('DIRECT_QSA_GATE_FUSE') == '1'   # nb2-gatefuse-v1 (static, trace-time)
+_GL_OUT_TAIL = _gl_os.environ.get("DIRECT_QSA_OUT_TAILZERO") == "1"
 
 
 class Qwen4ExpQSAMetadataBuilder(FlashAttentionMetadataBuilder):
@@ -103,9 +109,12 @@ class Qwen4ExpQSAFlashAttentionImpl(FlashAttentionImpl):
     supports_pcp: bool = False
 
     def __init__(self, *args, **kwargs) -> None:
+        # This owner uses FlashAttentionImpl only for validated metadata and the
+        # stock reshape_and_cache_flash KV write. Its attention result is
+        # produced exclusively by forward_qsa's paged Triton sparse kernel, so
+        # requiring the unrelated dense flash_attn_varlen_func rejects ROCm
+        # installations that have every operation this owner actually calls.
         super().__init__(*args, **kwargs)
-        if not is_flash_attn_varlen_func_available():
-            raise NotImplementedError("Qwen4Exp QSA requires FlashAttention")
         if self.dcp_world_size != 1:
             raise NotImplementedError(
                 "Qwen4Exp QSA does not support decode context parallelism"
@@ -113,6 +122,29 @@ class Qwen4ExpQSAFlashAttentionImpl(FlashAttentionImpl):
         if self.kv_cache_dtype not in ("auto", "bfloat16"):
             raise NotImplementedError("Qwen4Exp QSA requires a BF16 main KV cache")
         self.supports_quant_query_input = False
+
+    def do_kv_cache_update(
+        self,
+        layer: torch.nn.Module,
+        key: torch.Tensor,
+        value: torch.Tensor,
+        kv_cache: torch.Tensor,
+        slot_mapping: torch.Tensor,
+    ) -> None:
+        # QSA's Triton attention needs the native HIP KV scatter, not the
+        # separately guarded dense flash-attn varlen package. Preserve the
+        # parent paged-cache layout and slot-mapping semantics exactly.
+        key_cache, value_cache = kv_cache.transpose(1, 2).split(self.head_size, dim=-1)
+        reshape_and_cache_flash(
+            key,
+            value,
+            key_cache,
+            value_cache,
+            slot_mapping,
+            self.kv_cache_dtype,
+            layer._k_scale,
+            layer._v_scale,
+        )
 
     def forward_qsa(
         self,
@@ -136,7 +168,12 @@ class Qwen4ExpQSAFlashAttentionImpl(FlashAttentionImpl):
             raise NotImplementedError("QSA does not support sliding-window attention")
 
         num_tokens = attn_metadata.num_actual_tokens
-        output.zero_()
+        if _GL_OUT_TAIL:
+            # rows [:num_tokens] are fully written by the union path (NaN-poison selfchecked in the adapter) and zeroed
+            # by the adapter before any native fallback; only the tail keeps the zero-init semantics here.
+            output[num_tokens:].zero_()
+        else:
+            output.zero_()
         if num_tokens == 0:
             return output
 
@@ -151,9 +188,16 @@ class Qwen4ExpQSAFlashAttentionImpl(FlashAttentionImpl):
         if key_cache.dtype != torch.bfloat16 or query.dtype != torch.bfloat16:
             raise NotImplementedError("Qwen4Exp QSA requires BF16 Q/K/V")
 
-        from .ops.qsa import qsa_sparse_paged_attention
+        from direct_qsa_union_adapter_v1 import qsa_native_unique_paged_attention
 
-        qsa_sparse_paged_attention(
+        indexer = getattr(layer, "indexer", None)
+        qualified_unique = (
+            isinstance(indexer, QSAIndexer)
+            and indexer.compress_ratio == 4
+            and indexer.token_topk == 2048
+            and not indexer.skip_topk
+        )
+        qsa_native_unique_paged_attention(
             query[:num_tokens],
             key_cache,
             value_cache,
@@ -161,6 +205,10 @@ class Qwen4ExpQSAFlashAttentionImpl(FlashAttentionImpl):
             attn_metadata.block_table,
             token_to_req,
             output[:num_tokens],
+            qualified_unique=qualified_unique,
+            zero_fallback=_GL_OUT_TAIL,
+            context_len=(attn_metadata.max_seq_len
+                         if isinstance(getattr(attn_metadata, "max_seq_len", None), int) else None),
         )
         return output
 
@@ -246,6 +294,9 @@ class Qwen4ExpQSAAttention(Qwen3NextAttention, AttentionLayerBase):
             quant_config=quant_config,
             prefix=f"{prefix}.o_proj",
         )
+        import direct_dense_cm as _dcm  # nb2-densecm: column-major o_proj weight (NON-BITWISE, quality-gated; off unless DIRECT_DENSE_CM=1)
+
+        _dcm.install(self.o_proj, f"{prefix}.o_proj")
         self.rotary_emb = get_rope(
             head_size=self.head_dim,
             max_position=config.max_position_embeddings,
@@ -393,6 +444,11 @@ class Qwen4ExpQSAAttention(Qwen3NextAttention, AttentionLayerBase):
         value = v.view(num_tokens, self.num_kv_heads, self.head_dim)
         attn_output = torch.empty_like(query)
         encoded_layer_name = _encode_layer_name(self.layer_name)
+        _gf_gate = None
+        if (_GF_ON and gate is not None and self.attn_output_gate
+                and not getattr(self, "use_fused_qk_norm_rope_gate", False)):
+            _gf_gate = qkv[..., : self.q_size * 2].view(num_tokens, self.num_heads, 2 * self.head_dim)[..., self.head_dim:]
+        _GF_FUSED_THIS_CALL = _gf_gate is not None
         if current_platform.opaque_attention_op():
             torch.ops.vllm.qwen4_exp_qsa_with_output(
                 hidden_states,
@@ -402,6 +458,7 @@ class Qwen4ExpQSAAttention(Qwen3NextAttention, AttentionLayerBase):
                 value,
                 attn_output,
                 encoded_layer_name,
+                _gf_gate,
             )
         else:
             qwen4_exp_qsa_with_output(
@@ -412,10 +469,20 @@ class Qwen4ExpQSAAttention(Qwen3NextAttention, AttentionLayerBase):
                 value,
                 attn_output,
                 encoded_layer_name,
+                _gf_gate,
             )
-        flat_output = attn_output.view(num_tokens, -1)
-        if gate is not None:
-            flat_output = flat_output * torch.sigmoid(gate)
+        if _GF_FUSED_THIS_CALL:
+            flat_output = attn_output.view(num_tokens, -1)   # gate applied exactly once inside the op (v3k epilogue or ref kernel)
+        elif (gate is not None and _GL_GATE_LATE and self.attn_output_gate
+                and not getattr(self, "use_fused_qk_norm_rope_gate", False)):
+            # Same elements as _project_qkv_gate's gate (chunk(q_gate.view(T,H,2D),2)[1]), read as a strided view of qkv
+            # after the opaque attention op, so the pre-attention graph piece no longer materializes the reshape-copy.
+            g = qkv[..., : self.q_size * 2].view(num_tokens, self.num_heads, 2 * self.head_dim)[..., self.head_dim:]
+            flat_output = (attn_output * torch.sigmoid(g)).view(num_tokens, -1)
+        else:
+            flat_output = attn_output.view(num_tokens, -1)
+            if gate is not None:
+                flat_output = flat_output * torch.sigmoid(gate)
         output, _ = self.o_proj(flat_output)
         return output
 
@@ -428,20 +495,43 @@ def qwen4_exp_qsa_with_output(
     value: torch.Tensor,
     output: torch.Tensor,
     layer_name: LayerNameType,
+    gate: Optional[torch.Tensor] = None,
 ) -> None:
     """Run the complete QSA state/update/attend transaction."""
     layer_name = _resolve_layer_name(layer_name)
     layer = get_forward_context().no_compile_layers[layer_name]
     if not isinstance(layer, Qwen4ExpQSAAttention):
         raise TypeError(f"{layer_name} is not a Qwen4Exp QSA owner")
-    layer._run_qsa(
-        hidden_states,
-        positions,
-        query,
-        key,
-        value,
-        output,
-    )
+    if gate is None:
+        layer._run_qsa(
+            hidden_states,
+            positions,
+            query,
+            key,
+            value,
+            output,
+        )
+        return
+    # nb2-gatefuse-v1: this op owns the QSA output gate. The native union path may gate rows [0:n] in its epilogue
+    # (qsa_native_v3k_gate, exhaustively proven equal to inductor's mul_sigmoid); every other row/path gets the
+    # verbatim inductor-body Triton kernel in place. Exactly one application per element.
+    import direct_qsa_union_kernel_v1 as _uk
+    ctx = _uk.gf_begin(output, gate)
+    try:
+        layer._run_qsa(
+            hidden_states,
+            positions,
+            query,
+            key,
+            value,
+            output,
+        )
+    finally:
+        n = _uk.gf_end(ctx)
+    if n == 0:
+        _uk.gf_apply_(output, gate)
+    elif output.shape[0] > n:
+        _uk.gf_apply_(output[n:], gate[n:])
 
 
 direct_register_custom_op(

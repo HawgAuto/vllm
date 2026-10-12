@@ -17,6 +17,49 @@ from .cumsum import chunk_local_cumsum
 from .l2norm import l2norm_fwd
 from .solve_tril import solve_tril
 from .utils import FLA_CHUNK_SIZE, SUPPRESS_LEVEL, input_guard
+
+import contextlib as _vv_contextlib
+import functools as _vv_functools
+
+
+def _vv_token_strided(t):
+    # [1, T, H, V] with dense (H, V) inner dims and only a wider token stride: the DIRECT post_conv v-view layout.
+    return (isinstance(t, torch.Tensor) and t.dim() == 4 and t.shape[0] == 1 and t.stride(-1) == 1
+            and t.stride(-2) == t.shape[-1] and t.stride(1) >= t.shape[-2] * t.shape[-1])
+
+
+def _input_guard_vview(fn):
+    """utils.input_guard (contiguous() every tensor arg + device ctx) except that v (forward positional arg 3, after ctx)
+    is passed through when it is a token-strided view (overlay nb2-gdnvv-ab-v1).  Every other layout is made contiguous."""
+
+    @_vv_functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        keep = len(args) > 3 and _vv_token_strided(args[3]) and not args[3].is_contiguous()
+        contiguous_args = tuple(
+            a if (not isinstance(a, torch.Tensor) or (keep and i == 3)) else a.contiguous() for i, a in enumerate(args)
+        )
+        contiguous_kwargs = {
+            k: (v if not isinstance(v, torch.Tensor) else v.contiguous())
+            for k, v in kwargs.items()
+        }
+        tensor = None
+        for arg in args:
+            if isinstance(arg, torch.Tensor):
+                tensor = arg
+                break
+        if tensor is None:
+            for value in kwargs.values():
+                if isinstance(value, torch.Tensor):
+                    tensor = value
+                    break
+        if tensor is not None:
+            ctx = torch.accelerator.device_index(tensor.device.index)
+        else:
+            ctx = _vv_contextlib.nullcontext()
+        with ctx:
+            return fn(*contiguous_args, **contiguous_kwargs)
+
+    return wrapper
 from .wy_fast import recompute_w_u_fwd
 
 
@@ -88,7 +131,7 @@ def chunk_gated_delta_rule_fwd(
 
 class ChunkGatedDeltaRuleFunction(torch.autograd.Function):
     @staticmethod
-    @input_guard
+    @_input_guard_vview
     @torch.amp.custom_fwd(device_type="cuda")
     def forward(
         ctx,

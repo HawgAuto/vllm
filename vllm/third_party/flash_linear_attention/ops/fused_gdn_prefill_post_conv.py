@@ -15,6 +15,32 @@ import torch
 
 from vllm.triton_utils import tl, triton
 
+# ---- DIRECT v-view (overlay nb2-gdnvv-ab-v1): the V branch of this kernel is a pure copy of conv_output[:, 2HK:] into a
+# contiguous [L, HV, V] tensor whose only prefill consumer is FLA recompute_w_u (u = A @ (v*beta)).  With the v-view on, the
+# copy is skipped and v is returned as the strided view conv_output[:, 2HK:].unflatten(1, (HV, V)) (strides (qkv_dim, V, 1));
+# the overlay chunk.py guard passes it through and the overlay wy_fast.py reads it with an explicit token stride.  Same bytes
+# are read by recompute_w_u => bitwise identical.  On when DIRECT_GDN_VVIEW=1, else when direct_nb1.nb_level() >= 4.
+import os as _vv_os, json as _vv_json
+_VV_LOGGED = set()
+
+
+def _vview_on():
+    f = _vv_os.environ.get('DIRECT_GDN_VVIEW')
+    if f is not None:
+        return f == '1'
+    try:
+        import direct_nb1 as _nb
+        return _nb.nb_level() >= 4
+    except Exception:
+        return False
+
+
+def _vv_log(tag, **kw):
+    if tag in _VV_LOGGED:
+        return
+    _VV_LOGGED.add(tag)
+    print('DIRECT_GDN_VVIEW ' + _vv_json.dumps(dict(tag=tag, pid=_vv_os.getpid(), **kw), sort_keys=True, default=str), flush=True)
+
 
 @triton.jit
 def _fused_post_conv_kernel(
@@ -48,6 +74,7 @@ def _fused_post_conv_kernel(
     L2NORM_EPS: tl.constexpr,
     OUTPUT_G_EXP: tl.constexpr,
     SOFTPLUS_THRESHOLD: tl.constexpr,
+    WRITE_V: tl.constexpr,
     BLOCK_T: tl.constexpr,
     BK: tl.constexpr,
     BV: tl.constexpr,
@@ -58,8 +85,9 @@ def _fused_post_conv_kernel(
       - program_id(1) in [0, H):    Q/K head processing + l2norm
       - program_id(1) in [H, H+HV): V head processing + gating
     """
-    i_tb = tl.program_id(0)
-    i_head = tl.program_id(1)
+    # Adjacent CTAs touch adjacent heads of the same token tile.
+    i_tb = tl.program_id(0) // (H + HV)
+    i_head = tl.program_id(0) % (H + HV)
 
     HK: tl.constexpr = H * K
 
@@ -114,15 +142,16 @@ def _fused_post_conv_kernel(
 
         V_OFFSET: tl.constexpr = 2 * H * K
 
-        # Load V features: mixed_qkv[t, 2*H*K + i_hv*V + v]
-        v_offsets = (
-            offs_t[:, None] * stride_x_tok + V_OFFSET + i_hv * V + offs_v[None, :]
-        )
-        v_vals = tl.load(mixed_qkv_ptr + v_offsets, mask=mask_2d, other=0)
+        if WRITE_V:
+            # Load V features: mixed_qkv[t, 2*H*K + i_hv*V + v]
+            v_offsets = (
+                offs_t[:, None] * stride_x_tok + V_OFFSET + i_hv * V + offs_v[None, :]
+            )
+            v_vals = tl.load(mixed_qkv_ptr + v_offsets, mask=mask_2d, other=0)
 
-        # Store V
-        v_out = offs_t[:, None] * stride_v_tok + i_hv * V + offs_v[None, :]
-        tl.store(v_ptr + v_out, v_vals, mask=mask_2d)
+            # Store V
+            v_out = offs_t[:, None] * stride_v_tok + i_hv * V + offs_v[None, :]
+            tl.store(v_ptr + v_out, v_vals, mask=mask_2d)
 
         # Gating: one scalar per (token, v-head)
         A_log_val = tl.load(A_log_ptr + i_hv).to(tl.float32)
@@ -198,7 +227,12 @@ def fused_post_conv_prep(
     # Allocate outputs in target contiguous layout
     q = torch.empty(L, H, K, dtype=dtype, device=device)
     k = torch.empty(L, H, K, dtype=dtype, device=device)
-    v = torch.empty(L, HV, V, dtype=dtype, device=device)
+    vview = _vview_on() and L > 0 and conv_output.stride(1) == 1
+    if vview:
+        v = conv_output[:, 2 * H * K:].unflatten(1, (HV, V))
+        _vv_log('first_vview', L=int(L), stride=tuple(v.stride()))
+    else:
+        v = torch.empty(L, HV, V, dtype=dtype, device=device)
     g = torch.empty(L, HV, dtype=torch.float32, device=device)
     beta = torch.empty(L, HV, dtype=torch.float32, device=device)
 
@@ -211,7 +245,7 @@ def fused_post_conv_prep(
     BLOCK_T = 16  # tokens per block
 
     # Single kernel: blocks [0,H) do Q/K, blocks [H, H+HV) do V+gating
-    grid = (triton.cdiv(L, BLOCK_T), H + HV)
+    grid = (triton.cdiv(L, BLOCK_T) * (H + HV),)
     _fused_post_conv_kernel[grid](
         mixed_qkv_ptr=conv_output,
         a_ptr=a,
@@ -238,6 +272,7 @@ def fused_post_conv_prep(
         L2NORM_EPS=1e-6,
         OUTPUT_G_EXP=output_g_exp,
         SOFTPLUS_THRESHOLD=20.0,
+        WRITE_V=not vview,
         BLOCK_T=BLOCK_T,
         BK=BK,
         BV=BV,

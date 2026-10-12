@@ -151,6 +151,10 @@ def _moe_forward_fake(
     return torch.empty_like(hidden_states)
 
 
+import os as _dmf_os
+_DIRECT_MOE_SHARED_FOLD = _dmf_os.environ.get("DIRECT_MOE_SHARED_FOLD") == "1"
+
+
 def _moe_forward_shared(
     hidden_states: torch.Tensor,
     router_logits: torch.Tensor,
@@ -160,6 +164,15 @@ def _moe_forward_shared(
     hidden_dim_unpadded: int,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     layer = get_layer_from_name(_resolve_layer_name(layer_name))
+    if _DIRECT_MOE_SHARED_FOLD:
+        # The op returns (shared, shared+routed): the traced add in MoERunner.forward is removed under this flag.
+        import direct_moe_reduction as _dmr
+        ctx = _dmr.fold_begin(layer)
+        try:
+            s, f = layer._forward_impl(hidden_states, router_logits, shared_experts_input, input_ids)
+        finally:
+            _dmr.fold_end(ctx)
+        return cast(tuple[torch.Tensor, torch.Tensor], _dmr.fold_finish(s, f, ctx))
     return cast(
         tuple[torch.Tensor, torch.Tensor],
         layer._forward_impl(
@@ -778,9 +791,10 @@ class MoERunner(MoERunnerInterface):
         # Apply output transform (e.g. latent -> full dim)
         fused_output = self.apply_routed_output_transform(fused_output)
 
-        if shared_output is not None:
+        if shared_output is not None and not _DIRECT_MOE_SHARED_FOLD:
             result = shared_output + fused_output
         else:
+            # DIRECT_MOE_SHARED_FOLD: _moe_forward_shared already returned shared+routed in fused_output.
             result = fused_output
 
         result = self._maybe_reduce_final_output(

@@ -37,6 +37,7 @@ def recompute_w_u_fwd_kernel(
     cu_seqlens,
     chunk_indices,
     T,
+    stride_vt,
     H: tl.constexpr,
     Hg: tl.constexpr,
     K: tl.constexpr,
@@ -46,7 +47,7 @@ def recompute_w_u_fwd_kernel(
     BV: tl.constexpr,
     IS_VARLEN: tl.constexpr,
 ):
-    i_t, i_bh = tl.program_id(0), tl.program_id(1)
+    i_t, i_bh = tl.program_id(1), tl.program_id(0)
     i_b, i_h = i_bh // H, i_bh % H
     if IS_VARLEN:
         i_n, i_t = (
@@ -73,9 +74,9 @@ def recompute_w_u_fwd_kernel(
 
     for i_v in range(tl.cdiv(V, BV)):
         p_v = tl.make_block_ptr(
-            v + (bos * H + i_h) * V,
+            v + bos * stride_vt + i_h * V,
             (T, V),
-            (H * V, 1),
+            (stride_vt, 1),
             (i_t * BT, i_v * BV),
             (BT, BV),
             (1, 0),
@@ -134,9 +135,17 @@ def recompute_w_u_fwd(
     NT = triton.cdiv(T, BT) if cu_seqlens is None else len(chunk_indices)
     BK = 64
     BV = 64
-    u = torch.empty_like(v)
+    # DIRECT v-view (overlay nb2-gdnvv-ab-v1): v may be a token-strided view (dense heads/features); anything else is
+    # made contiguous.  stride_vt == H*V for contiguous v => identical addresses to the original kernel.
+    if v.stride(-1) != 1 or v.stride(-2) != V or (B > 1 and v.stride(0) != T * v.stride(1)):
+        v = v.contiguous()
+    stride_vt = v.stride(1)
+    u = v.new_empty(B, T, H, V)
     w = k.new_empty(B, T, H, K)
-    recompute_w_u_fwd_kernel[(NT, B * H)](
+    if cu_seqlens is not None and _wy_on():
+        _wy_run(k, v, beta, w, u, A, g_cumsum, cu_seqlens, chunk_indices, T, H, Hg, K, V, BT, B, NT, BK, BV, stride_vt)
+        return w, u
+    recompute_w_u_fwd_kernel[(B * H, NT)](
         k=k,
         v=v,
         beta=beta,
@@ -147,6 +156,7 @@ def recompute_w_u_fwd(
         cu_seqlens=cu_seqlens,
         chunk_indices=chunk_indices,
         T=T,
+        stride_vt=stride_vt,
         H=H,
         Hg=Hg,
         K=K,
@@ -156,3 +166,58 @@ def recompute_w_u_fwd(
         BV=BV,
     )
     return w, u
+
+
+# ---- DIRECT recompute_w_u pinned-config A/B path (overlay moe-wmma-unified-v10) ----
+# Autotune key [H,K,V,BT,BK,BV,IS_VARLEN] excludes T; BK/BV are wrapper constants (64/64); production autotunes w8/s3 once.
+# Exact screen wy-configs-01: all 80 configs bitwise-equal; BK32/BV32/w8/s1 is 1.72-1.77x faster at T=960/3136/4096/12288.
+# wmma5 arm (varlen path only, as screened) launches the bare JIT with that config; first call self-checks vs production.
+import os as _wy_os, json as _wy_json
+_WY_LOGGED = set()
+_WY_CHECKED = [False]
+_WY_CFG = dict(BK=int(_wy_os.environ.get('DIRECT_WY_BK', '32')), BV=int(_wy_os.environ.get('DIRECT_WY_BV', '32')),
+               num_warps=int(_wy_os.environ.get('DIRECT_WY_WARPS', '8')), num_stages=int(_wy_os.environ.get('DIRECT_WY_STAGES', '1')))
+
+
+def _wy_log(tag, **kw):
+    if tag in _WY_LOGGED:
+        return
+    _WY_LOGGED.add(tag)
+    print('DIRECT_WY ' + _wy_json.dumps(dict(tag=tag, pid=_wy_os.getpid(), **kw), sort_keys=True, default=str), flush=True)
+
+
+def _wy_on():
+    force = _wy_os.environ.get('DIRECT_WY_PIN')
+    if force is not None:
+        return force == '1'
+    try:
+        import direct_moe_ab_adapter_v1 as _ab
+    except Exception:
+        return False
+    ph = _ab.read_phase()
+    return ph is not None and ph['arm'] == 'wmma5'
+
+
+def _wy_launch(k, v, beta, w, u, A, g, cu_seqlens, chunk_indices, T, H, Hg, K, V, BT, B, NT, stride_vt):
+    jit = recompute_w_u_fwd_kernel.fn.fn
+    jit[(B * H, NT)](
+        k=k, v=v, beta=beta, w=w, u=u, A=A, g=g, cu_seqlens=cu_seqlens, chunk_indices=chunk_indices,
+        T=T, stride_vt=stride_vt, H=H, Hg=Hg, K=K, V=V, BT=BT, BK=_WY_CFG['BK'], BV=_WY_CFG['BV'], IS_VARLEN=True,
+        num_warps=_WY_CFG['num_warps'], num_stages=_WY_CFG['num_stages'])
+
+
+def _wy_run(k, v, beta, w, u, A, g, cu_seqlens, chunk_indices, T, H, Hg, K, V, BT, B, NT, BK_prod, BV_prod, stride_vt):
+    _wy_launch(k, v, beta, w, u, A, g, cu_seqlens, chunk_indices, T, H, Hg, K, V, BT, B, NT, stride_vt)
+    _wy_log('pinned_first_use', stride_vt=int(stride_vt), v_contig=bool(v.is_contiguous()), T=int(T), B=int(B), H=int(H), Hg=int(Hg), K=int(K), V=int(V), BT=int(BT), cfg=_WY_CFG)
+    if not _WY_CHECKED[0]:
+        w2 = torch.empty_like(w)
+        u2 = torch.empty_like(u)
+        recompute_w_u_fwd_kernel[(B * H, NT)](
+            k=k, v=v, beta=beta, w=w2, u=u2, A=A, g=g, cu_seqlens=cu_seqlens, chunk_indices=chunk_indices,
+            T=T, stride_vt=stride_vt, H=H, Hg=Hg, K=K, V=V, BT=BT, BK=BK_prod, BV=BV_prod)
+        eq = bool(torch.equal(w, w2) and torch.equal(u, u2))
+        _wy_log('selfcheck', T=int(T), equal=eq, cfg=_WY_CFG, prod_BK=BK_prod, prod_BV=BV_prod,
+                prod_cfg=str(recompute_w_u_fwd_kernel.fn.best_config))
+        if not eq:
+            raise RuntimeError('DIRECT_WY selfcheck mismatch vs autotuned production kernel')
+        _WY_CHECKED[0] = True

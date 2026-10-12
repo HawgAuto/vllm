@@ -504,6 +504,9 @@ class QwenGatedDeltaNetAttention(GatedDeltaNetAttention):
             quant_config=self.quant_config,
             prefix=f"{prefix}.out_proj",
         )
+        import direct_dense_cm as _dcm  # nb2-densecm: column-major out_proj weight (NON-BITWISE, quality-gated; off unless DIRECT_DENSE_CM=1)
+
+        _dcm.install(self.out_proj, f"{prefix}.out_proj")
 
         self.chunk_gated_delta_rule = ChunkGatedDeltaRule()
         self.gdn_prefill_backend = self.chunk_gated_delta_rule.gdn_prefill_backend
@@ -949,7 +952,7 @@ class QwenGatedDeltaNetAttention(GatedDeltaNetAttention):
         # ============================================================
         # Note: we should not use torch.empty here like other attention backends,
         # see discussions in https://github.com/vllm-project/vllm/pull/28182
-        core_attn_out = torch.zeros(
+        core_attn_out = (torch.empty if _DIRECT_GDN_EMPTY else torch.zeros)(
             (num_tokens, self.num_v_heads // self.tp_size, self.head_v_dim),
             dtype=hidden_states.dtype,
             device=hidden_states.device,
@@ -1349,6 +1352,11 @@ class QwenGatedDeltaNetAttention(GatedDeltaNetAttention):
         # 1.2: Process the remaining part
         if attn_metadata.num_prefills > 0:
             assert mixed_qkv_non_spec is not None
+            _direct_ck = getattr(attn_metadata, "direct_ckpt", None)
+            if _direct_ck is not None:
+                import direct_mamba_ckpt_v1 as _direct_mamba_ckpt
+
+                _direct_mamba_ckpt.gdn_export_conv(_direct_ck, mixed_qkv_non_spec, conv_state)
             mixed_qkv_non_spec_T = mixed_qkv_non_spec.transpose(0, 1)
             # - "cache_indices" updates the conv_state cache in positions
             #   pointed to by "state_indices_tensor"
@@ -1502,24 +1510,38 @@ class QwenGatedDeltaNetAttention(GatedDeltaNetAttention):
             assert prefill_has_initial_state is not None
             initial_state = ssm_state[prefill_state_indices]
             initial_state[~prefill_has_initial_state, ...] = 0
-            (
-                core_attn_out_non_spec,
-                last_recurrent_state,
-            ) = self.chunk_gated_delta_rule(
-                q=query_non_spec,
-                k=key_non_spec,
-                v=value_non_spec,
-                g=g_non_spec,
-                beta=beta_non_spec,
-                initial_state=initial_state,
-                output_final_state=True,
-                cu_seqlens=attn_metadata.prefill_query_start_loc,
-                chunk_indices=attn_metadata.chunk_indices,
-                chunk_offsets=attn_metadata.chunk_offsets,
-                use_qk_l2norm_in_kernel=False,
-            )
-            # Init cache
-            ssm_state[prefill_state_indices] = last_recurrent_state.to(ssm_state.dtype)
+            _direct_ck = getattr(attn_metadata, "direct_ckpt", None)
+            if _direct_ck is not None:
+                import direct_mamba_ckpt_v1 as _direct_mamba_ckpt
+
+                _direct_out_buf = None
+                if (not split_non_spec and spec_sequence_masks is None
+                        and query_non_spec.shape[1] == num_actual_tokens
+                        and _direct_dm_on('gdn_ckpt_cat')):
+                    _direct_out_buf = core_attn_out[:num_actual_tokens].unsqueeze(0)
+                core_attn_out_non_spec, last_recurrent_state = _direct_mamba_ckpt.gdn_two_call(
+                    self.chunk_gated_delta_rule, _direct_ck, query_non_spec, key_non_spec,
+                    value_non_spec, g_non_spec, beta_non_spec, initial_state, ssm_state,
+                    prefill_state_indices, out_buf=_direct_out_buf)
+            else:
+                (
+                    core_attn_out_non_spec,
+                    last_recurrent_state,
+                ) = self.chunk_gated_delta_rule(
+                    q=query_non_spec,
+                    k=key_non_spec,
+                    v=value_non_spec,
+                    g=g_non_spec,
+                    beta=beta_non_spec,
+                    initial_state=initial_state,
+                    output_final_state=True,
+                    cu_seqlens=attn_metadata.prefill_query_start_loc,
+                    chunk_indices=attn_metadata.chunk_indices,
+                    chunk_offsets=attn_metadata.chunk_offsets,
+                    use_qk_l2norm_in_kernel=False,
+                )
+                # Init cache
+                ssm_state[prefill_state_indices] = last_recurrent_state.to(ssm_state.dtype)
 
             if split_non_spec:
                 # Stitch the peeled decode outputs in front of the prefill
@@ -1558,7 +1580,8 @@ class QwenGatedDeltaNetAttention(GatedDeltaNetAttention):
             )
         elif spec_sequence_masks is not None:
             core_attn_out[:num_actual_tokens] = core_attn_out_spec.squeeze(0)
-        else:
+        elif not (core_attn_out_non_spec.data_ptr() == core_attn_out.data_ptr()
+                  and core_attn_out_non_spec.shape[1] == num_actual_tokens):
             core_attn_out[:num_actual_tokens] = core_attn_out_non_spec.squeeze(0)
 
     def _forward_core_decode_aiter(
@@ -1890,6 +1913,41 @@ class QwenGatedDeltaNetAttention(GatedDeltaNetAttention):
         )
 
 
+_DIRECT_GDN_EMPTY = os.environ.get("DIRECT_GDN_EMPTY") == "1"
+_DIRECT_GDN_POISON = set()
+
+
+def _direct_gdn_prep(layer, out, fc):
+    # forward_cuda allocated core_attn_out with torch.empty (DIRECT_GDN_EMPTY): restore zero-init for every row this op
+    # will not write.  Metadata lookup mirrors _forward_core (dict .get(prefix); anything else -> warmup, no writes).
+    # Pure-prefill batches write rows [:num_actual_tokens]; any other batch kind is zeroed in full.
+    md = fc.attn_metadata
+    m = md.get(layer.prefix) if isinstance(md, dict) else None
+    pure = (m is not None and m.num_prefills > 0 and m.num_decodes == 0 and m.num_spec_decodes == 0
+            and m.spec_sequence_masks is None)
+    if not pure:
+        out.zero_()
+        return None
+    n = int(m.num_actual_tokens)
+    out[n:].zero_()
+    cls = 'long' if n >= 2048 else 'short'
+    if cls not in _DIRECT_GDN_POISON:
+        _DIRECT_GDN_POISON.add(cls)
+        out[:n].fill_(float('nan'))
+        return (n, cls)
+    return None
+
+
+def _direct_gdn_check(out, pend):
+    import json
+    n, cls = pend
+    bad = int(torch.isnan(out[:n]).sum())
+    print('DIRECT_GDN_EMPTY ' + json.dumps({'tag': 'poison_check', 'class': cls, 'rows': n, 'nan_left': bad,
+                                           'pid': os.getpid()}), flush=True)
+    if bad:
+        raise RuntimeError('DIRECT_GDN_EMPTY: GDN core left %d unwritten elements in rows [:%d]' % (bad, n))
+
+
 @eager_break_during_capture
 def qwen_gdn_attention_core(
     qkv_or_qkvz: torch.Tensor,
@@ -1923,12 +1981,15 @@ def qwen_gdn_attention_core(
             core_attn_out=core_attn_out,
         )
     else:
+        _pend = _direct_gdn_prep(self, core_attn_out, forward_context) if _DIRECT_GDN_EMPTY else None
         self._forward_core(
             mixed_qkv=qkv_or_qkvz,
             b=b_or_ba,
             a=a_or_z_out,
             core_attn_out=core_attn_out,
         )
+        if _pend is not None:
+            _direct_gdn_check(core_attn_out, _pend)
 
 
 direct_register_custom_op(
@@ -1960,3 +2021,34 @@ direct_register_custom_op(
     op_func=qwen_gdn_attention_core_fused_norm_packed,
     mutates_args=["core_attn_out"],
 )
+
+
+# --- direct campaign: internal Mamba prefill checkpoint spec (direct_mamba_ckpt_v1) ---
+_direct_orig_gdn_spec = QwenGatedDeltaNetAttention.get_kv_cache_spec
+
+
+def _direct_gdn_spec(self, vllm_config):
+    import direct_mamba_ckpt_v1 as _direct_mamba_ckpt
+
+    return _direct_mamba_ckpt.maybe_checkpoint_spec(_direct_orig_gdn_spec(self, vllm_config), vllm_config)
+
+
+QwenGatedDeltaNetAttention.get_kv_cache_spec = _direct_gdn_spec
+
+
+# ---- DIRECT EXACT DATA-MOVEMENT A/B selector (overlay moe-wmma-unified-v6) ----
+import json as _dx_json, os as _dx_os
+_DX_LOGGED = set()
+def _direct_dm_on(tag):
+    v = _dx_os.environ.get('DIRECT_EXACT_DM')
+    if v is not None:
+        on = v == '1'
+    else:
+        from direct_moe_ab_adapter_v1 import read_phase as _rp
+        ph = _rp()
+        on = ph is not None and ph['arm'] == 'wmma5'
+    key = (tag, on)
+    if key not in _DX_LOGGED:
+        _DX_LOGGED.add(key)
+        print('DIRECT_EXACT_DM ' + _dx_json.dumps({'site': tag, 'fast': on, 'pid': _dx_os.getpid()}), flush=True)
+    return on

@@ -698,8 +698,24 @@ class TritonWNA16Experts(TritonExperts):
 
         assert hidden_states.is_contiguous(), "Hidden_states must be contiguous"
         assert hidden_states.dim() == 2
-        assert w1.stride(-1) == 1, "Stride of last dimension must be 1"
-        assert w2.stride(-1) == 1, "Stride of last dimension must be 1"
+        if getattr(self, "_direct_n_contiguous", False):
+            # Opt-in narrow bridge contract; unchanged native arithmetic/strides.
+            pack = 2 if self.quant_config.use_int4_w4a16 else 1
+            assert self.quant_config.use_int4_w4a16 or self.quant_config.use_int8_w8a16
+            assert w1.shape[1:] == (1280, 2560 // pack)
+            assert w2.shape[1:] == (2560, 640 // pack)
+            assert w1.shape[0] == w2.shape[0]
+            assert self.quant_config.w1_zp is None and self.quant_config.w2_zp is None
+            for weight, scale in ((w1, self.w1_scale), (w2, self.w2_scale)):
+                assert weight.dtype == torch.uint8 and scale.dtype == torch.float32
+                assert scale.shape == (weight.shape[0], weight.shape[1], weight.shape[2] * pack // 128)
+                for tensor in (weight, scale):
+                    e, n, k = tensor.shape
+                    assert tensor.stride() in ((n * k, k, 1), (n * k, 1, n)), "Unsafe direct MoE affine strides"
+                    assert tensor.storage_offset() == 0
+        else:
+            assert w1.stride(-1) == 1, "Stride of last dimension must be 1"
+            assert w2.stride(-1) == 1, "Stride of last dimension must be 1"
         assert hidden_states.dtype in [
             torch.float32,
             torch.float16,
@@ -723,6 +739,38 @@ class TritonWNA16Experts(TritonExperts):
             num_tokens,
             block_shape=self.block_shape,
         )
+
+        from direct_moe_warp_policy_v2 import select_configs
+        config_up, config_down = select_configs(
+            config, enabled=getattr(self, "_direct_warp_policy_enabled", False)
+                and getattr(self, "_direct_n_contiguous", False),
+            tokens=num_tokens, bf16=hidden_states.dtype == torch.bfloat16,
+            block_shape=self.block_shape,
+            w4=self.quant_config.use_int4_w4a16,
+            w8=self.quant_config.use_int8_w8a16,
+        )
+        if config_up is not config or config_down is not config:
+            import os
+            if os.environ.get("DIRECT_MOE_WARP_AUDIT") == "1":
+                import json
+                print("DIRECT_MOE_WARP_DISPATCH_ATTEMPT " + json.dumps({
+                    "tokens": num_tokens, "experts": E,
+                    "bits": 4 if self.quant_config.use_int4_w4a16 else 8,
+                    "up": config_up, "down": config_down,
+                }, sort_keys=True), flush=True)
+
+        from direct_moe_ab_adapter_v1 import select_invoke
+        broadcast_meta = dict(
+            enabled=getattr(self, "_direct_scale_broadcast_enabled", False)
+                and getattr(self, "_direct_n_contiguous", False),
+            tokens=num_tokens, bf16=hidden_states.dtype == torch.bfloat16,
+            block_shape=self.block_shape, w4=self.quant_config.use_int4_w4a16,
+            w8=self.quant_config.use_int8_w8a16,
+        )
+        invoke_up = select_invoke(invoke_fused_moe_wna16_triton_kernel,
+            projection="gate_up", config=config_up, **broadcast_meta)
+        invoke_down = select_invoke(invoke_fused_moe_wna16_triton_kernel,
+            projection="down", config=config_down, **broadcast_meta)
 
         if hidden_states.dtype == torch.bfloat16:
             compute_type = tl.bfloat16
@@ -752,7 +800,7 @@ class TritonWNA16Experts(TritonExperts):
             topk_ids, config["BLOCK_SIZE_M"], num_align_experts, expert_map
         )
 
-        invoke_fused_moe_wna16_triton_kernel(
+        invoke_up(
             hidden_states,
             w1,
             intermediate_cache1,
@@ -764,7 +812,7 @@ class TritonWNA16Experts(TritonExperts):
             num_tokens_post_padded,
             False,  # mul_routed_weights
             top_k_num,
-            config,
+            config_up,
             compute_type=compute_type,
             use_int8_w8a16=self.quant_config.use_int8_w8a16,
             use_int4_w4a16=self.quant_config.use_int4_w4a16,
@@ -785,7 +833,7 @@ class TritonWNA16Experts(TritonExperts):
             self.block_shape,
         )
 
-        invoke_fused_moe_wna16_triton_kernel(
+        invoke_down(
             qintermediate_cache2,
             w2,
             intermediate_cache3,
@@ -797,7 +845,7 @@ class TritonWNA16Experts(TritonExperts):
             num_tokens_post_padded,
             not apply_router_weight_on_input,
             1,
-            config,
+            config_down,
             compute_type=compute_type,
             use_int8_w8a16=self.quant_config.use_int8_w8a16,
             use_int4_w4a16=self.quant_config.use_int4_w4a16,

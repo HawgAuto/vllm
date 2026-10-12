@@ -23,7 +23,7 @@ def bind_checkpoint(request):
  p=Path(request['path'])
  if not p.is_absolute() or hashlib.sha256(p.read_bytes()).hexdigest()!=request['sha256']:raise ValueError('native checkpoint manifest digest')
  c=json.loads(p.read_text())
- if c['schema']!='native-mtp-checkpoint-v1' or c['recipe_sha256']!='023bddc128e45d56c9fc9bc8dae56dd213d3647b95739c1a23b059ae01c515d8':raise ValueError('native checkpoint recipe')
+ if c['schema']!='native-mtp-checkpoint-v1' or c['recipe_sha256']!='aabce8b815655175f7608a356fba2a2ec1c1396c7bbd622737c7eb54e3240ffd':raise ValueError('native checkpoint recipe')
  if len(c['tensors'])!=512*6+19*2+10+2:raise ValueError('incomplete native checkpoint manifest')
  return c
 

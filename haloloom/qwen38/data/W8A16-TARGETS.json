@@ -1,0 +1,3882 @@
+{
+ "canonical_prefix_rule": "strip leading 'model.'/'language_model.' segments",
+ "created_local": "2026-10-06T13:29:22-0500",
+ "expected_components": 497,
+ "expected_runtime_layers": 389,
+ "kernel_configs": {
+  "10240x2560": {
+   "1": [
+    2,
+    1
+   ],
+   "2": [
+    2,
+    1
+   ],
+   "3": [
+    2,
+    1
+   ],
+   "4": [
+    4,
+    1
+   ]
+  },
+  "10240x320": {
+   "1": [
+    4,
+    1
+   ],
+   "2": [
+    4,
+    1
+   ],
+   "3": [
+    4,
+    1
+   ],
+   "4": [
+    4,
+    1
+   ]
+  },
+  "12288x2560": {
+   "1": [
+    1,
+    4
+   ],
+   "2": [
+    4,
+    1
+   ],
+   "3": [
+    4,
+    1
+   ],
+   "4": [
+    4,
+    1
+   ]
+  },
+  "1280x2560": {
+   "1": [
+    2,
+    1
+   ],
+   "2": [
+    2,
+    1
+   ],
+   "3": [
+    2,
+    1
+   ],
+   "4": [
+    4,
+    1
+   ]
+  },
+  "13312x2560": {
+   "1": [
+    1,
+    4
+   ],
+   "2": [
+    4,
+    1
+   ],
+   "3": [
+    2,
+    1
+   ],
+   "4": [
+    4,
+    1
+   ]
+  },
+  "16384x2560": {
+   "1": [
+    1,
+    4
+   ],
+   "2": [
+    4,
+    1
+   ],
+   "3": [
+    2,
+    1
+   ],
+   "4": [
+    4,
+    1
+   ]
+  },
+  "248320x2560": {
+   "1": [
+    1,
+    4
+   ],
+   "2": [
+    2,
+    1
+   ],
+   "3": [
+    2,
+    1
+   ],
+   "4": [
+    4,
+    1
+   ]
+  },
+  "2560x2560": {
+   "1": [
+    2,
+    1
+   ],
+   "2": [
+    2,
+    1
+   ],
+   "3": [
+    2,
+    1
+   ],
+   "4": [
+    4,
+    1
+   ]
+  },
+  "2560x6144": {
+   "1": [
+    1,
+    4
+   ],
+   "2": [
+    1,
+    4
+   ],
+   "3": [
+    2,
+    2
+   ],
+   "4": [
+    2,
+    2
+   ]
+  },
+  "2560x640": {
+   "1": [
+    4,
+    2
+   ],
+   "2": [
+    2,
+    2
+   ],
+   "3": [
+    4,
+    2
+   ],
+   "4": [
+    4,
+    1
+   ]
+  },
+  "320x10240": {
+   "1": [
+    1,
+    4
+   ],
+   "2": [
+    1,
+    4
+   ],
+   "3": [
+    1,
+    4
+   ],
+   "4": [
+    2,
+    2
+   ]
+  },
+  "512x2560": {
+   "1": [
+    2,
+    1
+   ],
+   "2": [
+    2,
+    1
+   ],
+   "3": [
+    2,
+    1
+   ],
+   "4": [
+    2,
+    1
+   ]
+  },
+  "6144x2560": {
+   "1": [
+    2,
+    1
+   ],
+   "2": [
+    4,
+    1
+   ],
+   "3": [
+    4,
+    1
+   ],
+   "4": [
+    4,
+    1
+   ]
+  },
+  "640x2560": {
+   "1": [
+    2,
+    1
+   ],
+   "2": [
+    2,
+    1
+   ],
+   "3": [
+    4,
+    1
+   ],
+   "4": [
+    4,
+    1
+   ]
+  }
+ },
+ "kinds": {
+  "hc_mixed": 96,
+  "int8": 293
+ },
+ "layers": {
+  "hyper_connection_mixer.input_mix_weight_down": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.hyper_connection_mixer.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "int8"
+  },
+  "hyper_connection_mixer.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.hyper_connection_mixer.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.0.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.0.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.0.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.0.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.0.linear_attn.in_proj_qkvz": {
+   "K": 2560,
+   "M": 16384,
+   "components": [
+    "model.language_model.layers.0.linear_attn.in_proj_qkv.weight",
+    "model.language_model.layers.0.linear_attn.in_proj_z.weight"
+   ],
+   "kernel_config_key": "16384x2560",
+   "kind": "int8"
+  },
+  "layers.0.linear_attn.out_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.0.linear_attn.out_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.0.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.0.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.0.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.0.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.0.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.0.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.0.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.0.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.0.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.1.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.1.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.1.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.1.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.1.linear_attn.in_proj_qkvz": {
+   "K": 2560,
+   "M": 16384,
+   "components": [
+    "model.language_model.layers.1.linear_attn.in_proj_qkv.weight",
+    "model.language_model.layers.1.linear_attn.in_proj_z.weight"
+   ],
+   "kernel_config_key": "16384x2560",
+   "kind": "int8"
+  },
+  "layers.1.linear_attn.out_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.1.linear_attn.out_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.1.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.1.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.1.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.1.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.1.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.1.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.1.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.1.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.1.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.1.ple.key_proj": {
+   "K": 2560,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.1.ple.key_proj.weight"
+   ],
+   "kernel_config_key": "10240x2560",
+   "kind": "int8"
+  },
+  "layers.1.ple.value_proj": {
+   "K": 2560,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.1.ple.value_proj.weight"
+   ],
+   "kernel_config_key": "2560x2560",
+   "kind": "int8"
+  },
+  "layers.10.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.10.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.10.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.10.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.10.linear_attn.in_proj_qkvz": {
+   "K": 2560,
+   "M": 16384,
+   "components": [
+    "model.language_model.layers.10.linear_attn.in_proj_qkv.weight",
+    "model.language_model.layers.10.linear_attn.in_proj_z.weight"
+   ],
+   "kernel_config_key": "16384x2560",
+   "kind": "int8"
+  },
+  "layers.10.linear_attn.out_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.10.linear_attn.out_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.10.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.10.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.10.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.10.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.10.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.10.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.10.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.10.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.10.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.11.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.11.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.11.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.11.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.11.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.11.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.11.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.11.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.11.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.11.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.11.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.11.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.11.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.11.self_attn.o_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.11.self_attn.o_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.11.self_attn.qkv_proj": {
+   "K": 2560,
+   "M": 13312,
+   "components": [
+    "model.language_model.layers.11.self_attn.k_proj.weight",
+    "model.language_model.layers.11.self_attn.q_proj.weight",
+    "model.language_model.layers.11.self_attn.v_proj.weight"
+   ],
+   "kernel_config_key": "13312x2560",
+   "kind": "int8"
+  },
+  "layers.12.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.12.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.12.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.12.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.12.linear_attn.in_proj_qkvz": {
+   "K": 2560,
+   "M": 16384,
+   "components": [
+    "model.language_model.layers.12.linear_attn.in_proj_qkv.weight",
+    "model.language_model.layers.12.linear_attn.in_proj_z.weight"
+   ],
+   "kernel_config_key": "16384x2560",
+   "kind": "int8"
+  },
+  "layers.12.linear_attn.out_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.12.linear_attn.out_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.12.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.12.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.12.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.12.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.12.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.12.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.12.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.12.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.12.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.13.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.13.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.13.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.13.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.13.linear_attn.in_proj_qkvz": {
+   "K": 2560,
+   "M": 16384,
+   "components": [
+    "model.language_model.layers.13.linear_attn.in_proj_qkv.weight",
+    "model.language_model.layers.13.linear_attn.in_proj_z.weight"
+   ],
+   "kernel_config_key": "16384x2560",
+   "kind": "int8"
+  },
+  "layers.13.linear_attn.out_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.13.linear_attn.out_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.13.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.13.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.13.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.13.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.13.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.13.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.13.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.13.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.13.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.14.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.14.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.14.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.14.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.14.linear_attn.in_proj_qkvz": {
+   "K": 2560,
+   "M": 16384,
+   "components": [
+    "model.language_model.layers.14.linear_attn.in_proj_qkv.weight",
+    "model.language_model.layers.14.linear_attn.in_proj_z.weight"
+   ],
+   "kernel_config_key": "16384x2560",
+   "kind": "int8"
+  },
+  "layers.14.linear_attn.out_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.14.linear_attn.out_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.14.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.14.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.14.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.14.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.14.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.14.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.14.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.14.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.14.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.15.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.15.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.15.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.15.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.15.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.15.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.15.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.15.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.15.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.15.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.15.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.15.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.15.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.15.self_attn.o_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.15.self_attn.o_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.15.self_attn.qkv_proj": {
+   "K": 2560,
+   "M": 13312,
+   "components": [
+    "model.language_model.layers.15.self_attn.k_proj.weight",
+    "model.language_model.layers.15.self_attn.q_proj.weight",
+    "model.language_model.layers.15.self_attn.v_proj.weight"
+   ],
+   "kernel_config_key": "13312x2560",
+   "kind": "int8"
+  },
+  "layers.16.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.16.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.16.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.16.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.16.linear_attn.in_proj_qkvz": {
+   "K": 2560,
+   "M": 16384,
+   "components": [
+    "model.language_model.layers.16.linear_attn.in_proj_qkv.weight",
+    "model.language_model.layers.16.linear_attn.in_proj_z.weight"
+   ],
+   "kernel_config_key": "16384x2560",
+   "kind": "int8"
+  },
+  "layers.16.linear_attn.out_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.16.linear_attn.out_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.16.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.16.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.16.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.16.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.16.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.16.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.16.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.16.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.16.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.17.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.17.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.17.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.17.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.17.linear_attn.in_proj_qkvz": {
+   "K": 2560,
+   "M": 16384,
+   "components": [
+    "model.language_model.layers.17.linear_attn.in_proj_qkv.weight",
+    "model.language_model.layers.17.linear_attn.in_proj_z.weight"
+   ],
+   "kernel_config_key": "16384x2560",
+   "kind": "int8"
+  },
+  "layers.17.linear_attn.out_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.17.linear_attn.out_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.17.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.17.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.17.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.17.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.17.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.17.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.17.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.17.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.17.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.18.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.18.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.18.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.18.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.18.linear_attn.in_proj_qkvz": {
+   "K": 2560,
+   "M": 16384,
+   "components": [
+    "model.language_model.layers.18.linear_attn.in_proj_qkv.weight",
+    "model.language_model.layers.18.linear_attn.in_proj_z.weight"
+   ],
+   "kernel_config_key": "16384x2560",
+   "kind": "int8"
+  },
+  "layers.18.linear_attn.out_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.18.linear_attn.out_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.18.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.18.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.18.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.18.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.18.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.18.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.18.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.18.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.18.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.19.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.19.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.19.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.19.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.19.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.19.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.19.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.19.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.19.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.19.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.19.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.19.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.19.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.19.self_attn.o_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.19.self_attn.o_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.19.self_attn.qkv_proj": {
+   "K": 2560,
+   "M": 13312,
+   "components": [
+    "model.language_model.layers.19.self_attn.k_proj.weight",
+    "model.language_model.layers.19.self_attn.q_proj.weight",
+    "model.language_model.layers.19.self_attn.v_proj.weight"
+   ],
+   "kernel_config_key": "13312x2560",
+   "kind": "int8"
+  },
+  "layers.2.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.2.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.2.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.2.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.2.linear_attn.in_proj_qkvz": {
+   "K": 2560,
+   "M": 16384,
+   "components": [
+    "model.language_model.layers.2.linear_attn.in_proj_qkv.weight",
+    "model.language_model.layers.2.linear_attn.in_proj_z.weight"
+   ],
+   "kernel_config_key": "16384x2560",
+   "kind": "int8"
+  },
+  "layers.2.linear_attn.out_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.2.linear_attn.out_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.2.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.2.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.2.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.2.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.2.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.2.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.2.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.2.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.2.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.20.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.20.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.20.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.20.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.20.linear_attn.in_proj_qkvz": {
+   "K": 2560,
+   "M": 16384,
+   "components": [
+    "model.language_model.layers.20.linear_attn.in_proj_qkv.weight",
+    "model.language_model.layers.20.linear_attn.in_proj_z.weight"
+   ],
+   "kernel_config_key": "16384x2560",
+   "kind": "int8"
+  },
+  "layers.20.linear_attn.out_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.20.linear_attn.out_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.20.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.20.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.20.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.20.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.20.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.20.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.20.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.20.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.20.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.21.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.21.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.21.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.21.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.21.linear_attn.in_proj_qkvz": {
+   "K": 2560,
+   "M": 16384,
+   "components": [
+    "model.language_model.layers.21.linear_attn.in_proj_qkv.weight",
+    "model.language_model.layers.21.linear_attn.in_proj_z.weight"
+   ],
+   "kernel_config_key": "16384x2560",
+   "kind": "int8"
+  },
+  "layers.21.linear_attn.out_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.21.linear_attn.out_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.21.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.21.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.21.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.21.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.21.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.21.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.21.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.21.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.21.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.22.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.22.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.22.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.22.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.22.linear_attn.in_proj_qkvz": {
+   "K": 2560,
+   "M": 16384,
+   "components": [
+    "model.language_model.layers.22.linear_attn.in_proj_qkv.weight",
+    "model.language_model.layers.22.linear_attn.in_proj_z.weight"
+   ],
+   "kernel_config_key": "16384x2560",
+   "kind": "int8"
+  },
+  "layers.22.linear_attn.out_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.22.linear_attn.out_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.22.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.22.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.22.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.22.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.22.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.22.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.22.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.22.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.22.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.23.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.23.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.23.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.23.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.23.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.23.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.23.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.23.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.23.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.23.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.23.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.23.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.23.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.23.self_attn.o_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.23.self_attn.o_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.23.self_attn.qkv_proj": {
+   "K": 2560,
+   "M": 13312,
+   "components": [
+    "model.language_model.layers.23.self_attn.k_proj.weight",
+    "model.language_model.layers.23.self_attn.q_proj.weight",
+    "model.language_model.layers.23.self_attn.v_proj.weight"
+   ],
+   "kernel_config_key": "13312x2560",
+   "kind": "int8"
+  },
+  "layers.24.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.24.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.24.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.24.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.24.linear_attn.in_proj_qkvz": {
+   "K": 2560,
+   "M": 16384,
+   "components": [
+    "model.language_model.layers.24.linear_attn.in_proj_qkv.weight",
+    "model.language_model.layers.24.linear_attn.in_proj_z.weight"
+   ],
+   "kernel_config_key": "16384x2560",
+   "kind": "int8"
+  },
+  "layers.24.linear_attn.out_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.24.linear_attn.out_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.24.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.24.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.24.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.24.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.24.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.24.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.24.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.24.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.24.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.25.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.25.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.25.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.25.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.25.linear_attn.in_proj_qkvz": {
+   "K": 2560,
+   "M": 16384,
+   "components": [
+    "model.language_model.layers.25.linear_attn.in_proj_qkv.weight",
+    "model.language_model.layers.25.linear_attn.in_proj_z.weight"
+   ],
+   "kernel_config_key": "16384x2560",
+   "kind": "int8"
+  },
+  "layers.25.linear_attn.out_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.25.linear_attn.out_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.25.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.25.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.25.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.25.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.25.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.25.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.25.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.25.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.25.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.26.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.26.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.26.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.26.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.26.linear_attn.in_proj_qkvz": {
+   "K": 2560,
+   "M": 16384,
+   "components": [
+    "model.language_model.layers.26.linear_attn.in_proj_qkv.weight",
+    "model.language_model.layers.26.linear_attn.in_proj_z.weight"
+   ],
+   "kernel_config_key": "16384x2560",
+   "kind": "int8"
+  },
+  "layers.26.linear_attn.out_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.26.linear_attn.out_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.26.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.26.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.26.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.26.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.26.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.26.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.26.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.26.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.26.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.27.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.27.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.27.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.27.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.27.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.27.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.27.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.27.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.27.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.27.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.27.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.27.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.27.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.27.self_attn.o_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.27.self_attn.o_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.27.self_attn.qkv_proj": {
+   "K": 2560,
+   "M": 13312,
+   "components": [
+    "model.language_model.layers.27.self_attn.k_proj.weight",
+    "model.language_model.layers.27.self_attn.q_proj.weight",
+    "model.language_model.layers.27.self_attn.v_proj.weight"
+   ],
+   "kernel_config_key": "13312x2560",
+   "kind": "int8"
+  },
+  "layers.28.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.28.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.28.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.28.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.28.linear_attn.in_proj_qkvz": {
+   "K": 2560,
+   "M": 16384,
+   "components": [
+    "model.language_model.layers.28.linear_attn.in_proj_qkv.weight",
+    "model.language_model.layers.28.linear_attn.in_proj_z.weight"
+   ],
+   "kernel_config_key": "16384x2560",
+   "kind": "int8"
+  },
+  "layers.28.linear_attn.out_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.28.linear_attn.out_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.28.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.28.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.28.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.28.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.28.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.28.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.28.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.28.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.28.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.29.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.29.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.29.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.29.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.29.linear_attn.in_proj_qkvz": {
+   "K": 2560,
+   "M": 16384,
+   "components": [
+    "model.language_model.layers.29.linear_attn.in_proj_qkv.weight",
+    "model.language_model.layers.29.linear_attn.in_proj_z.weight"
+   ],
+   "kernel_config_key": "16384x2560",
+   "kind": "int8"
+  },
+  "layers.29.linear_attn.out_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.29.linear_attn.out_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.29.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.29.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.29.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.29.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.29.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.29.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.29.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.29.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.29.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.3.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.3.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.3.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.3.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.3.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.3.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.3.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.3.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.3.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.3.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.3.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.3.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.3.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.3.self_attn.o_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.3.self_attn.o_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.3.self_attn.qkv_proj": {
+   "K": 2560,
+   "M": 13312,
+   "components": [
+    "model.language_model.layers.3.self_attn.k_proj.weight",
+    "model.language_model.layers.3.self_attn.q_proj.weight",
+    "model.language_model.layers.3.self_attn.v_proj.weight"
+   ],
+   "kernel_config_key": "13312x2560",
+   "kind": "int8"
+  },
+  "layers.30.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.30.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.30.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.30.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.30.linear_attn.in_proj_qkvz": {
+   "K": 2560,
+   "M": 16384,
+   "components": [
+    "model.language_model.layers.30.linear_attn.in_proj_qkv.weight",
+    "model.language_model.layers.30.linear_attn.in_proj_z.weight"
+   ],
+   "kernel_config_key": "16384x2560",
+   "kind": "int8"
+  },
+  "layers.30.linear_attn.out_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.30.linear_attn.out_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.30.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.30.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.30.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.30.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.30.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.30.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.30.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.30.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.30.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.31.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.31.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.31.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.31.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.31.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.31.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.31.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.31.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.31.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.31.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.31.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.31.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.31.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.31.self_attn.o_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.31.self_attn.o_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.31.self_attn.qkv_proj": {
+   "K": 2560,
+   "M": 13312,
+   "components": [
+    "model.language_model.layers.31.self_attn.k_proj.weight",
+    "model.language_model.layers.31.self_attn.q_proj.weight",
+    "model.language_model.layers.31.self_attn.v_proj.weight"
+   ],
+   "kernel_config_key": "13312x2560",
+   "kind": "int8"
+  },
+  "layers.32.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.32.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.32.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.32.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.32.linear_attn.in_proj_qkvz": {
+   "K": 2560,
+   "M": 16384,
+   "components": [
+    "model.language_model.layers.32.linear_attn.in_proj_qkv.weight",
+    "model.language_model.layers.32.linear_attn.in_proj_z.weight"
+   ],
+   "kernel_config_key": "16384x2560",
+   "kind": "int8"
+  },
+  "layers.32.linear_attn.out_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.32.linear_attn.out_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.32.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.32.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.32.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.32.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.32.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.32.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.32.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.32.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.32.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.33.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.33.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.33.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.33.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.33.linear_attn.in_proj_qkvz": {
+   "K": 2560,
+   "M": 16384,
+   "components": [
+    "model.language_model.layers.33.linear_attn.in_proj_qkv.weight",
+    "model.language_model.layers.33.linear_attn.in_proj_z.weight"
+   ],
+   "kernel_config_key": "16384x2560",
+   "kind": "int8"
+  },
+  "layers.33.linear_attn.out_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.33.linear_attn.out_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.33.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.33.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.33.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.33.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.33.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.33.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.33.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.33.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.33.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.34.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.34.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.34.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.34.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.34.linear_attn.in_proj_qkvz": {
+   "K": 2560,
+   "M": 16384,
+   "components": [
+    "model.language_model.layers.34.linear_attn.in_proj_qkv.weight",
+    "model.language_model.layers.34.linear_attn.in_proj_z.weight"
+   ],
+   "kernel_config_key": "16384x2560",
+   "kind": "int8"
+  },
+  "layers.34.linear_attn.out_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.34.linear_attn.out_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.34.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.34.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.34.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.34.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.34.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.34.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.34.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.34.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.34.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.35.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.35.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.35.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.35.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.35.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.35.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.35.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.35.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.35.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.35.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.35.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.35.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.35.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.35.self_attn.o_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.35.self_attn.o_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.35.self_attn.qkv_proj": {
+   "K": 2560,
+   "M": 13312,
+   "components": [
+    "model.language_model.layers.35.self_attn.k_proj.weight",
+    "model.language_model.layers.35.self_attn.q_proj.weight",
+    "model.language_model.layers.35.self_attn.v_proj.weight"
+   ],
+   "kernel_config_key": "13312x2560",
+   "kind": "int8"
+  },
+  "layers.36.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.36.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.36.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.36.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.36.linear_attn.in_proj_qkvz": {
+   "K": 2560,
+   "M": 16384,
+   "components": [
+    "model.language_model.layers.36.linear_attn.in_proj_qkv.weight",
+    "model.language_model.layers.36.linear_attn.in_proj_z.weight"
+   ],
+   "kernel_config_key": "16384x2560",
+   "kind": "int8"
+  },
+  "layers.36.linear_attn.out_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.36.linear_attn.out_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.36.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.36.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.36.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.36.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.36.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.36.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.36.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.36.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.36.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.37.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.37.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.37.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.37.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.37.linear_attn.in_proj_qkvz": {
+   "K": 2560,
+   "M": 16384,
+   "components": [
+    "model.language_model.layers.37.linear_attn.in_proj_qkv.weight",
+    "model.language_model.layers.37.linear_attn.in_proj_z.weight"
+   ],
+   "kernel_config_key": "16384x2560",
+   "kind": "int8"
+  },
+  "layers.37.linear_attn.out_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.37.linear_attn.out_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.37.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.37.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.37.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.37.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.37.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.37.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.37.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.37.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.37.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.38.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.38.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.38.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.38.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.38.linear_attn.in_proj_qkvz": {
+   "K": 2560,
+   "M": 16384,
+   "components": [
+    "model.language_model.layers.38.linear_attn.in_proj_qkv.weight",
+    "model.language_model.layers.38.linear_attn.in_proj_z.weight"
+   ],
+   "kernel_config_key": "16384x2560",
+   "kind": "int8"
+  },
+  "layers.38.linear_attn.out_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.38.linear_attn.out_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.38.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.38.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.38.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.38.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.38.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.38.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.38.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.38.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.38.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.39.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.39.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.39.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.39.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.39.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.39.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.39.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.39.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.39.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.39.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.39.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.39.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.39.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.39.self_attn.o_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.39.self_attn.o_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.39.self_attn.qkv_proj": {
+   "K": 2560,
+   "M": 13312,
+   "components": [
+    "model.language_model.layers.39.self_attn.k_proj.weight",
+    "model.language_model.layers.39.self_attn.q_proj.weight",
+    "model.language_model.layers.39.self_attn.v_proj.weight"
+   ],
+   "kernel_config_key": "13312x2560",
+   "kind": "int8"
+  },
+  "layers.4.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.4.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.4.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.4.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.4.linear_attn.in_proj_qkvz": {
+   "K": 2560,
+   "M": 16384,
+   "components": [
+    "model.language_model.layers.4.linear_attn.in_proj_qkv.weight",
+    "model.language_model.layers.4.linear_attn.in_proj_z.weight"
+   ],
+   "kernel_config_key": "16384x2560",
+   "kind": "int8"
+  },
+  "layers.4.linear_attn.out_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.4.linear_attn.out_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.4.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.4.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.4.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.4.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.4.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.4.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.4.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.4.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.4.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.40.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.40.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.40.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.40.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.40.linear_attn.in_proj_qkvz": {
+   "K": 2560,
+   "M": 16384,
+   "components": [
+    "model.language_model.layers.40.linear_attn.in_proj_qkv.weight",
+    "model.language_model.layers.40.linear_attn.in_proj_z.weight"
+   ],
+   "kernel_config_key": "16384x2560",
+   "kind": "int8"
+  },
+  "layers.40.linear_attn.out_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.40.linear_attn.out_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.40.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.40.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.40.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.40.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.40.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.40.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.40.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.40.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.40.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.41.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.41.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.41.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.41.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.41.linear_attn.in_proj_qkvz": {
+   "K": 2560,
+   "M": 16384,
+   "components": [
+    "model.language_model.layers.41.linear_attn.in_proj_qkv.weight",
+    "model.language_model.layers.41.linear_attn.in_proj_z.weight"
+   ],
+   "kernel_config_key": "16384x2560",
+   "kind": "int8"
+  },
+  "layers.41.linear_attn.out_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.41.linear_attn.out_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.41.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.41.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.41.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.41.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.41.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.41.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.41.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.41.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.41.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.42.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.42.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.42.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.42.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.42.linear_attn.in_proj_qkvz": {
+   "K": 2560,
+   "M": 16384,
+   "components": [
+    "model.language_model.layers.42.linear_attn.in_proj_qkv.weight",
+    "model.language_model.layers.42.linear_attn.in_proj_z.weight"
+   ],
+   "kernel_config_key": "16384x2560",
+   "kind": "int8"
+  },
+  "layers.42.linear_attn.out_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.42.linear_attn.out_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.42.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.42.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.42.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.42.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.42.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.42.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.42.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.42.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.42.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.43.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.43.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.43.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.43.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.43.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.43.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.43.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.43.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.43.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.43.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.43.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.43.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.43.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.43.self_attn.o_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.43.self_attn.o_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.43.self_attn.qkv_proj": {
+   "K": 2560,
+   "M": 13312,
+   "components": [
+    "model.language_model.layers.43.self_attn.k_proj.weight",
+    "model.language_model.layers.43.self_attn.q_proj.weight",
+    "model.language_model.layers.43.self_attn.v_proj.weight"
+   ],
+   "kernel_config_key": "13312x2560",
+   "kind": "int8"
+  },
+  "layers.44.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.44.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.44.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.44.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.44.linear_attn.in_proj_qkvz": {
+   "K": 2560,
+   "M": 16384,
+   "components": [
+    "model.language_model.layers.44.linear_attn.in_proj_qkv.weight",
+    "model.language_model.layers.44.linear_attn.in_proj_z.weight"
+   ],
+   "kernel_config_key": "16384x2560",
+   "kind": "int8"
+  },
+  "layers.44.linear_attn.out_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.44.linear_attn.out_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.44.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.44.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.44.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.44.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.44.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.44.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.44.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.44.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.44.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.45.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.45.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.45.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.45.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.45.linear_attn.in_proj_qkvz": {
+   "K": 2560,
+   "M": 16384,
+   "components": [
+    "model.language_model.layers.45.linear_attn.in_proj_qkv.weight",
+    "model.language_model.layers.45.linear_attn.in_proj_z.weight"
+   ],
+   "kernel_config_key": "16384x2560",
+   "kind": "int8"
+  },
+  "layers.45.linear_attn.out_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.45.linear_attn.out_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.45.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.45.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.45.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.45.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.45.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.45.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.45.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.45.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.45.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.46.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.46.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.46.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.46.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.46.linear_attn.in_proj_qkvz": {
+   "K": 2560,
+   "M": 16384,
+   "components": [
+    "model.language_model.layers.46.linear_attn.in_proj_qkv.weight",
+    "model.language_model.layers.46.linear_attn.in_proj_z.weight"
+   ],
+   "kernel_config_key": "16384x2560",
+   "kind": "int8"
+  },
+  "layers.46.linear_attn.out_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.46.linear_attn.out_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.46.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.46.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.46.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.46.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.46.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.46.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.46.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.46.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.46.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.47.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.47.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.47.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.47.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.47.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.47.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.47.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.47.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.47.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.47.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.47.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.47.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.47.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.47.self_attn.o_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.47.self_attn.o_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.47.self_attn.qkv_proj": {
+   "K": 2560,
+   "M": 13312,
+   "components": [
+    "model.language_model.layers.47.self_attn.k_proj.weight",
+    "model.language_model.layers.47.self_attn.q_proj.weight",
+    "model.language_model.layers.47.self_attn.v_proj.weight"
+   ],
+   "kernel_config_key": "13312x2560",
+   "kind": "int8"
+  },
+  "layers.5.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.5.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.5.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.5.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.5.linear_attn.in_proj_qkvz": {
+   "K": 2560,
+   "M": 16384,
+   "components": [
+    "model.language_model.layers.5.linear_attn.in_proj_qkv.weight",
+    "model.language_model.layers.5.linear_attn.in_proj_z.weight"
+   ],
+   "kernel_config_key": "16384x2560",
+   "kind": "int8"
+  },
+  "layers.5.linear_attn.out_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.5.linear_attn.out_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.5.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.5.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.5.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.5.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.5.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.5.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.5.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.5.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.5.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.6.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.6.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.6.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.6.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.6.linear_attn.in_proj_qkvz": {
+   "K": 2560,
+   "M": 16384,
+   "components": [
+    "model.language_model.layers.6.linear_attn.in_proj_qkv.weight",
+    "model.language_model.layers.6.linear_attn.in_proj_z.weight"
+   ],
+   "kernel_config_key": "16384x2560",
+   "kind": "int8"
+  },
+  "layers.6.linear_attn.out_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.6.linear_attn.out_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.6.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.6.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.6.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.6.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.6.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.6.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.6.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.6.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.6.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.7.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.7.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.7.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.7.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.7.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.7.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.7.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.7.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.7.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.7.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.7.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.7.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.7.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.7.self_attn.o_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.7.self_attn.o_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.7.self_attn.qkv_proj": {
+   "K": 2560,
+   "M": 13312,
+   "components": [
+    "model.language_model.layers.7.self_attn.k_proj.weight",
+    "model.language_model.layers.7.self_attn.q_proj.weight",
+    "model.language_model.layers.7.self_attn.v_proj.weight"
+   ],
+   "kernel_config_key": "13312x2560",
+   "kind": "int8"
+  },
+  "layers.8.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.8.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.8.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.8.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.8.linear_attn.in_proj_qkvz": {
+   "K": 2560,
+   "M": 16384,
+   "components": [
+    "model.language_model.layers.8.linear_attn.in_proj_qkv.weight",
+    "model.language_model.layers.8.linear_attn.in_proj_z.weight"
+   ],
+   "kernel_config_key": "16384x2560",
+   "kind": "int8"
+  },
+  "layers.8.linear_attn.out_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.8.linear_attn.out_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.8.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.8.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.8.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.8.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.8.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.8.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.8.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.8.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.8.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.9.attn_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.9.attn_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.9.attn_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.9.attn_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "layers.9.linear_attn.in_proj_qkvz": {
+   "K": 2560,
+   "M": 16384,
+   "components": [
+    "model.language_model.layers.9.linear_attn.in_proj_qkv.weight",
+    "model.language_model.layers.9.linear_attn.in_proj_z.weight"
+   ],
+   "kernel_config_key": "16384x2560",
+   "kind": "int8"
+  },
+  "layers.9.linear_attn.out_proj": {
+   "K": 6144,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.9.linear_attn.out_proj.weight"
+   ],
+   "kernel_config_key": "2560x6144",
+   "kind": "int8"
+  },
+  "layers.9.mlp.shared_expert.down_proj": {
+   "K": 640,
+   "M": 2560,
+   "components": [
+    "model.language_model.layers.9.mlp.shared_expert.down_proj.weight"
+   ],
+   "kernel_config_key": "2560x640",
+   "kind": "int8"
+  },
+  "layers.9.mlp.shared_expert.gate_up_proj": {
+   "K": 2560,
+   "M": 1280,
+   "components": [
+    "model.language_model.layers.9.mlp.shared_expert.gate_proj.weight",
+    "model.language_model.layers.9.mlp.shared_expert.up_proj.weight"
+   ],
+   "kernel_config_key": "1280x2560",
+   "kind": "int8"
+  },
+  "layers.9.mlp_hyper_connection.input_mix_weight_down_block_inject": {
+   "K": 10240,
+   "M": 320,
+   "components": [
+    "model.language_model.layers.9.mlp_hyper_connection.input_mix_weight_down.weight"
+   ],
+   "kernel_config_key": "320x10240",
+   "kind": "hc_mixed"
+  },
+  "layers.9.mlp_hyper_connection.input_mix_weight_up": {
+   "K": 320,
+   "M": 10240,
+   "components": [
+    "model.language_model.layers.9.mlp_hyper_connection.input_mix_weight_up.weight"
+   ],
+   "kernel_config_key": "10240x320",
+   "kind": "int8"
+  },
+  "lm_head": {
+   "K": 2560,
+   "M": 248320,
+   "components": [
+    "lm_head.weight"
+   ],
+   "kernel_config_key": "248320x2560",
+   "kind": "int8"
+  }
+ },
+ "schema": "dense-w8a16-runtime-targets-v1",
+ "source": {
+  "kernel_result": "attempts/w8kernel-k1-01/result/KERNEL-RESULT.json",
+  "kernel_result_sha256": "e1065eebf20a2b580de6ccb1b5fb4c0584dba6f8eb985d27a8cf45f8a82295f5",
+  "quant_result": "dense-w8a16-v1/artifacts/QUANT-RESULT.json",
+  "quant_result_sha256": "2c80e88dd59b5f2019ec8ba0df5b2502d2a63d95ccb023507797775d47fb2b16"
+ }
+}

@@ -2,6 +2,8 @@
 # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
 
 import asyncio
+import json
+import os
 from collections import defaultdict, deque
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -63,9 +65,31 @@ class RequestOutputCollector:
         self.ready = asyncio.Event()
 
         self._input_stream_task: asyncio.Task | None = None
+        # Opt-in campaign transport mode: retain each producer object. Never
+        # split an already-batched output or manufacture arrival timestamps.
+        self._direct_fifo = (deque() if self.aggregate and
+                             os.environ.get("DIRECT_STREAM_FIFO", "0") == "1"
+                             else None)
+        self._direct_stats = {"puts": 0, "gets": 0, "token_ids": 0,
+                              "max_input_tokens": 0, "pending_max": 0}
 
     def put(self, output: RequestOutput | PoolingRequestOutput | Exception) -> None:
         """Non-blocking put operation."""
+        if self._direct_fifo is not None:
+            # Native error priority is preserved: an error replaces pending
+            # output and is raised by the consumer, not hidden behind tokens.
+            if isinstance(output, Exception):
+                self._direct_fifo.clear()
+            self._direct_fifo.append(output)
+            s = self._direct_stats
+            s["puts"] += 1
+            if isinstance(output, RequestOutput):
+                counts = [len(o.token_ids) for o in output.outputs]
+                s["token_ids"] += sum(counts)
+                s["max_input_tokens"] = max([s["max_input_tokens"], *counts])
+            s["pending_max"] = max(s["pending_max"], len(self._direct_fifo))
+            self.ready.set()
+            return
         if self.output is None or isinstance(output, Exception):
             self.output = output
             self.ready.set()
@@ -82,6 +106,12 @@ class RequestOutputCollector:
 
     async def get(self) -> RequestOutput | PoolingRequestOutput:
         """Get operation blocks on put event."""
+        if self._direct_fifo is not None:
+            while not self._direct_fifo:
+                await self.ready.wait()
+            output = self.get_nowait()
+            assert output is not None
+            return output
         while (output := self.output) is None:
             await self.ready.wait()
         self.output = None
@@ -92,6 +122,22 @@ class RequestOutputCollector:
 
     def get_nowait(self) -> RequestOutput | PoolingRequestOutput | None:
         """Non-blocking get operation."""
+        if self._direct_fifo is not None:
+            if not self._direct_fifo:
+                return None
+            output = self._direct_fifo.popleft()
+            if not self._direct_fifo:
+                self.ready.clear()
+            self._direct_stats["gets"] += 1
+            if isinstance(output, Exception):
+                raise output
+            if output.finished:
+                print("DIRECT_STREAM_FIFO " + json.dumps({
+                    "mode": "fifo-preserve-producer-objects-v1",
+                    "request_id": self.request_id, **self._direct_stats,
+                    "pending_at_finish": len(self._direct_fifo),
+                }), flush=True)
+            return output
         output = self.output
         if output is not None:
             self.output = None

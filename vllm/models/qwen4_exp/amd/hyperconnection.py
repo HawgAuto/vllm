@@ -25,6 +25,10 @@ Typical usage inside a transformer decoder layer::
 import torch
 from torch import nn
 
+import direct_nb1 as _nb1  # nb1 overlay
+import direct_w8hc as _w8hc  # dense W8A16 K5d-A (k5d-v1/K5D-PLAN.md): INT8 HC layers -> HC fusions via on-the-fly dequant
+import direct_w8a16 as _w8  # dense W8A16 stage 3 (inert unless DIRECT_W8A16=1)
+
 from vllm.model_executor.layers.linear import (
     MergedColumnParallelLinear,
     ReplicatedLinear,
@@ -80,7 +84,7 @@ class GatedResidual(nn.Module):
             from mtp_dense import scoped_hc
 
             self.mtp_unfused = scoped_hc(quant_config, prefix) is not None
-        hc_quant = quant_config if self.mtp_unfused else None
+        hc_quant = quant_config if self.mtp_unfused else _w8.config_or_none()  # W8A16: target HC down/up INT8
 
         norm_size = (
             self.hyper_hidden_size if config.hc_per_branch_norm else config.hidden_size
@@ -129,7 +133,7 @@ class GatedResidual(nn.Module):
                 + ([self.pad_size] if self.pad_size else []),
                 bias=False,
                 params_dtype=config.params_dtype,
-                quant_config=None,
+                quant_config=_w8.config_or_none(),  # W8A16: hc_mixed (INT8 down rows, BF16 inject rows)
                 prefix=maybe_prefix(prefix, "input_mix_weight_down_block_inject"),
                 return_bias=False,
                 disable_tp=True,
@@ -140,7 +144,7 @@ class GatedResidual(nn.Module):
                 self.lora_rank,
                 bias=False,
                 params_dtype=config.params_dtype,
-                quant_config=None,
+                quant_config=_w8.config_or_none(),  # W8A16: final mixer down INT8
                 prefix=maybe_prefix(prefix, "input_mix_weight_down"),
                 return_bias=False,
             )
@@ -154,6 +158,7 @@ class GatedResidual(nn.Module):
             return_bias=False,
             disable_tp=self.mtp_unfused,
         )
+        self._nb1_id = _nb1.register_hc(self)
 
     def mix(
         self, hidden_states: torch.Tensor
@@ -178,8 +183,15 @@ class GatedResidual(nn.Module):
             injection = None
 
         lora = hc_silu(lora, self.hc_count)
-        gate = self.input_mix_weight_up(lora)  # [M, D]
-        block_input = hc_gate_mix(xn, gate, self.hc_count)
+        if self.mtp_unfused:
+            gate = self.input_mix_weight_up(lora)  # [M, D]
+            block_input = hc_gate_mix(xn, gate, self.hc_count)
+        elif _w8hc.is_int8(self.input_mix_weight_up):  # K5d-A: INT8 up -> dequant + nb1 hc_ugm_xn for M >= 256
+            block_input = _w8hc.hc_up_gate_mix(xn, lora, self.input_mix_weight_up, self.hc_count, self._nb1_id)
+        else:  # nb1: custom op; reference path = original module + original gate_mix op
+            block_input = _nb1.hc_up_gate_mix(
+                xn, lora, self.input_mix_weight_up.weight, self.hc_count, self._nb1_id
+            )
 
         return hidden_states, block_input, injection
 
@@ -195,6 +207,23 @@ class GatedResidual(nn.Module):
         block's mix. Its combine with ``block_output`` is fused with this
         module's input RMSNorm.
         """
+        if (not self.mtp_unfused and self.use_combine and self.pad_size and _nb1.HCV3_MODEL
+                and hasattr(self.input_mix_weight_down_block_inject, 'w8_ops_merged_w') and _w8hc.is_int8(self.input_mix_weight_up)):
+            # K5d-A: INT8 down/inject + up -> HCV3 / nb1 fusions on dequantized BF16 temporaries (else the exact w8k5 call)
+            return _w8hc.hc_combine_and_mix(
+                hidden_states, prev_block_output, prev_injection, self.hc_norm.weight,
+                self.input_mix_weight_down_block_inject, self.input_mix_weight_up,
+                self.config.rms_norm_eps, self.hc_count, self._nb1_id,
+            )
+        if not self.mtp_unfused and self.use_combine and self.pad_size and _nb1.HCV3_MODEL:
+            # nb2-hcv3: dual-arm opaque op; nb level < 2 runs the exact nb1 sequence below inside the op.
+            return _nb1.hc_combine_and_mix(
+                hidden_states, prev_block_output, prev_injection, self.hc_norm.weight,
+                # dense W8A16: zero-storage int8 [336, K] shape carrier for the op's fake when the layer is INT8 (else .weight)
+                getattr(self.input_mix_weight_down_block_inject, 'w8_ops_merged_w', self.input_mix_weight_down_block_inject.weight),
+                self.input_mix_weight_up.weight,
+                self.config.rms_norm_eps, self.hc_count, self._nb1_id,
+            )
         hidden_states, xn = hc_combine_norm(
             hidden_states,
             prev_block_output,
@@ -217,8 +246,15 @@ class GatedResidual(nn.Module):
             injection = None
 
         lora = hc_silu(lora, self.hc_count)
-        gate = self.input_mix_weight_up(lora)  # [M, D]
-        block_input = hc_gate_mix(xn, gate, self.hc_count)
+        if self.mtp_unfused:
+            gate = self.input_mix_weight_up(lora)  # [M, D]
+            block_input = hc_gate_mix(xn, gate, self.hc_count)
+        elif _w8hc.is_int8(self.input_mix_weight_up):  # K5d-A
+            block_input = _w8hc.hc_up_gate_mix(xn, lora, self.input_mix_weight_up, self.hc_count, self._nb1_id)
+        else:  # nb1: custom op; reference path = original module + original gate_mix op
+            block_input = _nb1.hc_up_gate_mix(
+                xn, lora, self.input_mix_weight_up.weight, self.hc_count, self._nb1_id
+            )
 
         return hidden_states, block_input, injection
 

@@ -889,16 +889,17 @@ class RoutedExperts(PluggableLayer):
         self, weights: Iterable[tuple[str, torch.Tensor]]
     ) -> Iterable[str]:
         expert_mapping = self.get_expert_mapping(include_fused=True)
+        # LOADFAST v2: indexed substring match; yields exactly the entries the original linear
+        # scan would process (all matches in mapping order; fused stops at first non-match).
+        _lf2_index = _lf2_mapping_index(self, expert_mapping)
         for expert_name, loaded_weight in weights:
             qual_name = f"{self.layer_name}.{expert_name}"
             # Fused expert weights can be identified by their 3D tensors
             is_fused = loaded_weight.dim() == 3
             matched = False
-            for param_name, weight_name, expert_id, shard_id in expert_mapping:
-                if weight_name not in qual_name:
-                    if matched and is_fused:
-                        break
-                    continue
+            for param_name, weight_name, expert_id, shard_id in _lf2_iter_matches(
+                _lf2_index, expert_mapping, qual_name, is_fused
+            ):
                 matched = True
                 is_per_expert_fused_w13 = (
                     not is_fused
@@ -1296,3 +1297,51 @@ class RoutedExperts(PluggableLayer):
 
 # Mark the RoutedExperts weight_loader as supporting MoE-specific parameters
 RoutedExperts.weight_loader.supports_moe_loading = True  # type: ignore[attr-defined]
+
+
+# ---------------------------------------------------------------- LOADFAST v2 (nb2-loadfast-v2)
+def _lf2_mapping_index(owner, expert_mapping):
+    cached = getattr(owner, "_lf2_mapping_cache", None)
+    if cached is not None and cached[0] == expert_mapping:
+        return cached[1]
+    by_name: dict[str, list[int]] = {}
+    for j, entry in enumerate(expert_mapping):
+        by_name.setdefault(entry[1], []).append(j)
+    if "" in by_name:
+        index = None  # an empty weight_name matches every name: keep the original scan
+    else:
+        index = (by_name, tuple(sorted({len(w) for w in by_name})), frozenset(w[0] for w in by_name))
+    owner.__dict__["_lf2_mapping_cache"] = (list(expert_mapping), index)
+    return index
+
+
+def _lf2_iter_matches(index, expert_mapping, qual_name, is_fused):
+    if index is None:
+        matched = False
+        for entry in expert_mapping:
+            if entry[1] not in qual_name:
+                if matched and is_fused:
+                    return
+                continue
+            matched = True
+            yield entry
+        return
+    by_name, lens, first = index
+    n = len(qual_name)
+    hits = set()
+    for i, ch in enumerate(qual_name):
+        if ch in first:
+            for size in lens:
+                if i + size > n:
+                    break
+                w = qual_name[i : i + size]
+                if w in by_name:
+                    hits.add(w)
+    if not hits:
+        return
+    prev = None
+    for j in sorted(j for w in hits for j in by_name[w]):
+        if is_fused and prev is not None and j != prev + 1:
+            return
+        prev = j
+        yield expert_mapping[j]

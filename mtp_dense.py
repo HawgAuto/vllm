@@ -6,13 +6,23 @@ BF16 expansion. dequant_oracle is CPU TEST ONLY and is never called by apply.
 Native INT8 file2file tensors use signed [K,N] codes and FP32 [N,G] scales.
 """
 from pathlib import Path
+import os as _ddn_os
 from functools import lru_cache
 import hashlib,json,re,copy
 import torch
 from torch import nn
 from vllm.model_executor.layers.linear import LinearMethodBase,UnquantizedLinearMethod
 
-RECIPE_SHA='023bddc128e45d56c9fc9bc8dae56dd213d3647b95739c1a23b059ae01c515d8'
+# Slot11 candidate, opt-in only (DIRECT_DDN_LARGE=1): prefill-only retile of the SAME stock gptq_awq kernel for
+# DDN reference calls with M>=DDN_LARGE_MIN_M. BLOCK_SIZE_K=64 and SPLIT_K=1 are unchanged, so every output element
+# keeps the identical ordered sequence of K-steps; only M/N tiling, program order (GROUP_SIZE_M) and launch resources
+# change. Decode (M<=4 native DDN), M<DDN_LARGE_MIN_M and the N=4 matrices keep the qualified 16x32x64 launch.
+_DDN_LARGE=_ddn_os.environ.get("DIRECT_DDN_LARGE")=="1"
+DDN_LARGE_MIN_M=256
+DDN_LARGE_CONFIG={'BLOCK_SIZE_M':128,'BLOCK_SIZE_N':128,'BLOCK_SIZE_K':64,'GROUP_SIZE_M':8,'SPLIT_K':1,'num_warps':8,'num_stages':2}
+DDN_LARGE_SHAPES=frozenset({(320,10240),(640,2560),(1280,2560),(2560,640),(2560,2560),(2560,6144),(10240,320),(13312,2560)})
+
+RECIPE_SHA='aabce8b815655175f7608a356fba2a2ec1c1396c7bbd622737c7eb54e3240ffd'
 KERNEL_SHA='21860340e4b409b01666e2ba0f0edae66b0f97b859756b174b573bab895cfaf7'
 WIRE='canonical-offset-k-packed-v1'
 
@@ -146,6 +156,13 @@ class MTPDenseMethod(LinearMethodBase):
         self.n=start
         self.shards=(['q','k','v'] if len(specs)==3 else list(range(len(specs))))
         self.layer=None;self.loaded=set();self.ready=False
+        # Validated eagerly after loading; production apply must not perform
+        # source-file I/O while TorchDynamo is tracing the full graph.
+        self._production_kernel=None
+        self._ddn_id=-1
+        if _ddn_os.environ.get("DIRECT_DDN") == "1" and self.bits == 8 and self.group == 64 and self.test_recorder is None:
+            from direct_ddn_adapter import register
+            self._ddn_id=register(self)
 
     def create_weights(self,layer,input_size_per_partition,output_partition_sizes,input_size,output_size,params_dtype,**extra_weight_attrs):
         if (input_size_per_partition,input_size,output_size)!=(self.k,self.k,self.n) or output_partition_sizes!=[s['source_shape'][0] for s in self.specs] or getattr(layer,'tp_size',1)!=1:raise ValueError('TP/partition geometry not supported')
@@ -182,7 +199,7 @@ class MTPDenseMethod(LinearMethodBase):
         if layer is not self.layer or self.loaded!=expected:raise ValueError('missing weight/scale pieces')
         _scales(layer.weight_scale,self.n,self.k,self.group)
         if self.test_recorder is None:
-            native_kernel()
+            self._production_kernel=native_kernel()
         self.ready=True
 
     @staticmethod
@@ -205,6 +222,8 @@ class MTPDenseMethod(LinearMethodBase):
         a=x.reshape(-1,self.k).contiguous();m=a.shape[0]
         out=torch.empty((m,1,self.n),dtype=x.dtype,device=x.device)
         if m==0:return out.reshape(*x.shape[:-1],self.n)
+        if self._ddn_id >= 0:
+            return torch.ops.vllm.direct_mtp_ddn(a,layer.weight,layer.weight_scale,self._ddn_id).reshape(*x.shape[:-1],self.n)
         cfg=self.launch_config(self.k)
         bm=cfg['BLOCK_SIZE_M'];em=((m+bm-1)//bm)*bm
         ids=torch.arange(em,dtype=torch.int32,device=x.device)
@@ -212,7 +231,7 @@ class MTPDenseMethod(LinearMethodBase):
         padded=torch.full((1,),em,dtype=torch.int32,device=x.device)
         b=layer.weight.unsqueeze(0);s=layer.weight_scale.unsqueeze(0)
         import triton.language as tl
-        kernel=self.test_recorder if self.test_recorder is not None else native_kernel()
+        kernel=self.test_recorder if self.test_recorder is not None else self._production_kernel
         grid=(em//bm*((self.n+cfg['BLOCK_SIZE_N']-1)//cfg['BLOCK_SIZE_N']),)
         kernel[grid](a,b,out,s,None,None,ids,experts,padded,self.n,self.k,em,m,
                      a.stride(0),a.stride(1),b.stride(0),b.stride(2),b.stride(1),out.stride(1),out.stride(2),
@@ -220,6 +239,51 @@ class MTPDenseMethod(LinearMethodBase):
                      block_k_diviable=True,group_size=self.group,MUL_ROUTED_WEIGHT=False,top_k=1,
                      compute_type=tl.bfloat16,has_zp=False,use_int4_w4a16=self.bits==4,use_int8_w8a16=self.bits==8,**cfg)
         return out.reshape(*x.shape[:-1],self.n)
+
+    def _ddn_reference(self,layer,x,bias=None):
+        if layer is not self.layer or not self.ready:raise ValueError('missing/finalization required')
+        if x.dtype!=torch.bfloat16:raise ValueError('BF16 activations required; not W8A8')
+        if x.ndim<2 or x.shape[-1]!=self.k:raise ValueError('input shape')
+        if tuple(layer.weight.shape)!=(self.n,self.k if self.bits==8 else self.k//2) or tuple(layer.weight_scale.shape)!=(self.n,self.k//self.group):raise ValueError('resident shape changed')
+        if layer.weight.dtype!=torch.uint8 or layer.weight_scale.dtype!=torch.float32 or not layer.weight.is_contiguous() or not layer.weight_scale.is_contiguous():raise ValueError('resident dtype/layout changed')
+        if bias is not None:raise ValueError('approved matrices have no bias')
+        if x.device!=layer.weight.device or x.device!=layer.weight_scale.device:raise ValueError('device mismatch')
+        if self.test_recorder is None and x.device.type!='cuda':raise RuntimeError('GPU dispatch only; CPU oracle is not production fallback')
+        if self.test_recorder is not None and (not isinstance(self.test_recorder,TestCallRecorder) or x.device.type!='cpu'):raise ValueError('explicit CPU test recorder only')
+        torch._assert_async(torch.isfinite(x).all(), 'activations must be finite')
+        a=x.reshape(-1,self.k).contiguous();m=a.shape[0]
+        out=torch.empty((m,1,self.n),dtype=x.dtype,device=x.device)
+        if m==0:return out.reshape(*x.shape[:-1],self.n)
+        cfg=self.launch_config(self.k);large=_DDN_LARGE and self._large_eligible(m)
+        if large:cfg=dict(DDN_LARGE_CONFIG)
+        bm=cfg['BLOCK_SIZE_M'];em=((m+bm-1)//bm)*bm
+        ids=torch.arange(em,dtype=torch.int32,device=x.device)
+        experts=torch.zeros((em//bm,),dtype=torch.int32,device=x.device)
+        padded=torch.full((1,),em,dtype=torch.int32,device=x.device)
+        b=layer.weight.unsqueeze(0);s=layer.weight_scale.unsqueeze(0)
+        import triton.language as tl
+        kernel=self.test_recorder if self.test_recorder is not None else self._production_kernel
+        grid=(em//bm*((self.n+cfg['BLOCK_SIZE_N']-1)//cfg['BLOCK_SIZE_N']),)
+        launched=kernel[grid](a,b,out,s,None,None,ids,experts,padded,self.n,self.k,em,m,
+                     a.stride(0),a.stride(1),b.stride(0),b.stride(2),b.stride(1),out.stride(1),out.stride(2),
+                     s.stride(0),s.stride(2),s.stride(1),0,0,0,
+                     block_k_diviable=True,group_size=self.group,MUL_ROUTED_WEIGHT=False,top_k=1,
+                     compute_type=tl.bfloat16,has_zp=False,use_int4_w4a16=self.bits==4,use_int8_w8a16=self.bits==8,**cfg)
+        if large:self._large_receipt(m,grid,launched)
+        return out.reshape(*x.shape[:-1],self.n)
+
+    def _large_eligible(self,m):
+        if not (m>=DDN_LARGE_MIN_M and self.bits==8 and self.group==64 and self.test_recorder is None and (self.n,self.k) in DDN_LARGE_SHAPES):return False
+        if torch.cuda.is_current_stream_capturing():raise RuntimeError('DDN large retile is eager prefill only; refusing graph capture')
+        return True
+
+    def _large_receipt(self,m,grid,launched):
+        import time
+        meta=launched.metadata
+        if (meta.num_warps,meta.num_stages)!=(DDN_LARGE_CONFIG['num_warps'],DDN_LARGE_CONFIG['num_stages']):raise RuntimeError('DDN large launch metadata drift')
+        print('DIRECT_DDN_LARGE '+json.dumps({'unix_ns':time.time_ns(),'pid':_ddn_os.getpid(),'names':[s['name'] for s in self.specs],'m':m,'n':self.n,'k':self.k,'grid':list(grid),
+              'block_m':DDN_LARGE_CONFIG['BLOCK_SIZE_M'],'block_n':DDN_LARGE_CONFIG['BLOCK_SIZE_N'],'block_k':DDN_LARGE_CONFIG['BLOCK_SIZE_K'],'group_m':DDN_LARGE_CONFIG['GROUP_SIZE_M'],
+              'warps':meta.num_warps,'stages':meta.num_stages,'kernel':meta.name,'registers':launched.n_regs,'spills':launched.n_spills}),flush=True)
 
 
 @lru_cache(maxsize=1)

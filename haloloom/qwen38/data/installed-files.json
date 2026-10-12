@@ -1,0 +1,537 @@
+{
+  "schema": "haloloom.qwen38.installed-files.v1",
+  "native_base_commit": "21ee743f474a35a056e8d5ade2c9aa744e726e6e",
+  "fork_base_commit": "ab3c2dc13266e6f85fbdda8af95eaec11fb30bd8",
+  "files": [
+    {
+      "installed_path": "/opt/haloloom/qwen38/data/W8A16-DISPATCH-K5D.json",
+      "source": "haloloom/qwen38/data/W8A16-DISPATCH-K5D.json",
+      "sha256": "a45323bf212fbddee7831d7e293703875e39265e4acd1a7a5946755c86d8b909"
+    },
+    {
+      "installed_path": "/opt/haloloom/qwen38/data/W8A16-TARGETS.json",
+      "source": "haloloom/qwen38/data/W8A16-TARGETS.json",
+      "sha256": "4eec9535da4df62b43314a7135b74ebefd557b46369c426a145158764457a0cf"
+    },
+    {
+      "installed_path": "/opt/haloloom/qwen38/data/dispatch.json",
+      "source": "haloloom/qwen38/data/dispatch.json",
+      "sha256": "bb5bc4ba5634893baa60188430f608981149a08df9a4282b5bb831c8b0796eb4"
+    },
+    {
+      "installed_path": "/opt/haloloom/qwen38/data/kernel-sources.json",
+      "source": "haloloom/qwen38/data/kernel-sources.json",
+      "sha256": "87f0db8a08d8ac4fdd2ca709ca8db5bbf777bf04c8cc1a07a6af336240acf277"
+    },
+    {
+      "installed_path": "/opt/haloloom/qwen38/data/runtime-env.json",
+      "source": "haloloom/qwen38/data/runtime-env.json",
+      "sha256": "5116636145b5ab7f41ce7c54335164d5546dbae0f5a31df096dc93eb5a362675"
+    },
+    {
+      "installed_path": "/opt/haloloom/qwen38/data/wheelhouse.json",
+      "source": "haloloom/qwen38/data/wheelhouse.json",
+      "sha256": "77e520a459e8914286686b26c6261aca7296b26fdb7f73f312f28cb83190746e"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/ddn_v1.hsaco",
+      "source": "haloloom/qwen38/kernels/ddn_v1.hsaco",
+      "sha256": "cfeddc3d88fb463ac81fb37bbfefa3585c4f1a7b150be0604f3bfa5c464244ef"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_d23_grouped.hsaco",
+      "source": "haloloom/qwen38/kernels/direct_d23_grouped.hsaco",
+      "sha256": "3b486377eeade55f6d2356fbb92a510ef65c1fb8d33828da7bd335ee35c6d686"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_d23_merge.py",
+      "source": "haloloom/qwen38/python/direct_d23_merge.py",
+      "sha256": "a2a560b811c91af1d78d1b4e9729b42ed42fc21342fdd5e57b82bfe56b55bcee"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_ddn.py",
+      "source": "haloloom/qwen38/python/direct_ddn.py",
+      "sha256": "8981af5bcd1d971170d8b33c8a449d751d411d874ddac99876f9151c11df92de"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_ddn_adapter.py",
+      "source": "haloloom/qwen38/python/direct_ddn_adapter.py",
+      "sha256": "fc2cdce5747f60cb25609fedd7f674ecf01b3889d76e5cb021e5a673ee489a0f"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_dense_cm.py",
+      "source": "haloloom/qwen38/python/direct_dense_cm.py",
+      "sha256": "7beba30d4b989ba09fddb02ee057ac6439da12c488e1a7c9942adef5aacc476e"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_hc_fused_v3e.hsaco",
+      "source": "haloloom/qwen38/kernels/direct_hc_fused_v3e.hsaco",
+      "sha256": "5b8be446552d8c8b10108e59dd3da174f34be38ac40444fe53c44afb8cb5ed69"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_hc_fused_v3g.hsaco",
+      "source": "haloloom/qwen38/kernels/direct_hc_fused_v3g.hsaco",
+      "sha256": "940bfcdb28868c508c22b5a78611b04d1ed91b1277ef534e239a692e1a765cb9"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_hc_v3.py",
+      "source": "haloloom/qwen38/python/direct_hc_v3.py",
+      "sha256": "8614e88d164a30cb3ad77cfee2c980ec7796439b4337327da5c5a94342e46dd0"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_hip_module_v1.py",
+      "source": "haloloom/qwen38/python/direct_hip_module_v1.py",
+      "sha256": "6c2b7fd9a715a144fc3e2cde58525418f229073591905b060a68815c8100780d"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_mamba_ckpt_v1.py",
+      "source": "haloloom/qwen38/python/direct_mamba_ckpt_v1.py",
+      "sha256": "12689e4627c4eca97532bbdbf0fdc4683281b6661c2ffafc31a8431f7e5ea480"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_moe_ab_adapter_v1.py",
+      "source": "haloloom/qwen38/python/direct_moe_ab_adapter_v1.py",
+      "sha256": "4642d4afcef067bebab60c9b23376892d4e2d1bdb79ed7b59cade17b2980b70a"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_moe_packed_adapter_v1.py",
+      "source": "haloloom/qwen38/python/direct_moe_packed_adapter_v1.py",
+      "sha256": "51aacdb97b911948bc05a5d3a31255ac4faf1e3ccb227a1b5029d6afe22e9ea3"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_moe_reduction.py",
+      "source": "haloloom/qwen38/python/direct_moe_reduction.py",
+      "sha256": "f424b4e74ee34b6228c5acd095f2e4de7cb192a23f2b50c8deee0af7269e6eff"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_moe_scale_broadcast_adapter_v1.py",
+      "source": "haloloom/qwen38/python/direct_moe_scale_broadcast_adapter_v1.py",
+      "sha256": "bcddb31db67300f4c874cefe7f36fc01029a1984f3b6b96dbdde55b172f6631c"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_moe_scale_broadcast_kernel_v1.py",
+      "source": "haloloom/qwen38/python/direct_moe_scale_broadcast_kernel_v1.py",
+      "sha256": "2f02380804a0185522ae4f532ec0ede492b9bdf1043ab432ae397f8c839bcb57"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_moe_sdm3.py",
+      "source": "haloloom/qwen38/python/direct_moe_sdm3.py",
+      "sha256": "2e08ce7e9d30598ca23339cac069bfe0406fc1ad2f2e465b0bef066daa745ae0"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_moe_sdm_v2.py",
+      "source": "haloloom/qwen38/python/direct_moe_sdm_v2.py",
+      "sha256": "df7067db9324fc2557a92610da5d8ff41d733103a3966c8404f787d939a28e94"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_moe_unified_v1.py",
+      "source": "haloloom/qwen38/python/direct_moe_unified_v1.py",
+      "sha256": "50ae12eb67ea47452710e750345033d493a997001bbd5198e932455f4c894e56"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_moe_w4_packed_once_v1.py",
+      "source": "haloloom/qwen38/python/direct_moe_w4_packed_once_v1.py",
+      "sha256": "72e61e67bf21ccbc67506184d1f483c5798a865dd0357461c3c9b58ef6f07f4d"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_moe_warp_policy_v2.py",
+      "source": "haloloom/qwen38/python/direct_moe_warp_policy_v2.py",
+      "sha256": "984b29d3998dc6b3da41e50380021c6a7c26db2d9a81e86390b1ec3c72f44feb"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_moe_wmma_adapter_v1.py",
+      "source": "haloloom/qwen38/python/direct_moe_wmma_adapter_v1.py",
+      "sha256": "b8f6628b351987a96dc29325234e0dba5dc3b0b3d172694c2794ac98f91b5cc0"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_moe_wna16_wmma_v13.hsaco",
+      "source": "haloloom/qwen38/kernels/direct_moe_wna16_wmma_v13.hsaco",
+      "sha256": "ce67d0a439960f572f8d275873a8d6f9ed3596a710a01480f25bb2e8c941a490"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_moe_wna16_wmma_v6.hsaco",
+      "source": "haloloom/qwen38/kernels/direct_moe_wna16_wmma_v6.hsaco",
+      "sha256": "77edbbe9896853326467eb93498596dc57d6c0ce42266ffce3e7f714cd44ad82"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_moe_wna16_wmma_v6w10.hsaco",
+      "source": "haloloom/qwen38/kernels/direct_moe_wna16_wmma_v6w10.hsaco",
+      "sha256": "2e0e23fc5f47e184cf88c98ca0dd8b3b618fe63084aa70c8446973d8b31dd153"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_nb1.py",
+      "source": "haloloom/qwen38/python/direct_nb1.py",
+      "sha256": "2b7398a993f52b172053d6b613d6c80570548385c755329d8991f9ab26b1c0ff"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_nb1_aux.hsaco",
+      "source": "haloloom/qwen38/kernels/direct_nb1_aux.hsaco",
+      "sha256": "17e0256db66d52fe216d9d2dc89fb1d76b1b502ac1371802e87e556a437a89b9"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_ple_ab_v1.py",
+      "source": "haloloom/qwen38/python/direct_ple_ab_v1.py",
+      "sha256": "3d26e6fc3d59c9575a2bef4d76d52c9441cb9dd3c60a80539b6ec624ae05de55"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_ple_gather.so",
+      "source": "haloloom/qwen38/kernels/direct_ple_gather.so",
+      "sha256": "50e5b458f9cae0eddd783478d3d8a0dfd9c37fc5e56e0beda30cc5ce30fe0a42"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_qnr_v3.hsaco",
+      "source": "haloloom/qwen38/kernels/direct_qnr_v3.hsaco",
+      "sha256": "aa1acf2a3b2f8765a3e1a154d8e8a7a905556409587b6cdede810439f3aec2a0"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_qsa_canonical.py",
+      "source": "haloloom/qwen38/python/direct_qsa_canonical.py",
+      "sha256": "1843bd38be252b952eef0b495a3eca5d8ccf4c838e1c9ab999309d2d6e8d8d9f"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_qsa_i1.hsaco",
+      "source": "haloloom/qwen38/kernels/direct_qsa_i1.hsaco",
+      "sha256": "27e6d2c030a60f05d6a039fd1953abe3e11beab37cc18a6cbefe12b38683ef26"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_qsa_mqa_native_v1.py",
+      "source": "haloloom/qwen38/python/direct_qsa_mqa_native_v1.py",
+      "sha256": "6e6be8b7d3ff2e1eaf1a2ad3739d9df2ca13e2024a9c6e086258bdbe982c6443"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_qsa_mqa_scores_v4.hsaco",
+      "source": "haloloom/qwen38/kernels/direct_qsa_mqa_scores_v4.hsaco",
+      "sha256": "696611cccf8ff49a3b7cfedcaf08ad5c7013467b1ea70cf23240ef3e82ec84a1"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_qsa_native_v3g.hsaco",
+      "source": "haloloom/qwen38/kernels/direct_qsa_native_v3g.hsaco",
+      "sha256": "02ef2113d8ab0542c7cdebe0366321e2a2eaa7af0c41c4ef1633b9d32eb790a7"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_qsa_native_v3k.hsaco",
+      "source": "haloloom/qwen38/kernels/direct_qsa_native_v3k.hsaco",
+      "sha256": "4fd1d783be45a65c623a946cf177a6626395fec6b59be3d759cdfd1949ad5f6b"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_qsa_normrope_v2.py",
+      "source": "haloloom/qwen38/python/direct_qsa_normrope_v2.py",
+      "sha256": "eb9e31d91a437ec57f11bdb5e67c7bd702e93e0a9564b0da2f11f346a88150ce"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_qsa_union_adapter_v1.py",
+      "source": "haloloom/qwen38/python/direct_qsa_union_adapter_v1.py",
+      "sha256": "0d2da7fd5d617d6d92287357ea8e7a93e2cdccd8671bd403c87880ff75993f05"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_qsa_union_build_v1.hsaco",
+      "source": "haloloom/qwen38/kernels/direct_qsa_union_build_v1.hsaco",
+      "sha256": "530659dd9b31ddb3043fbf2623c45c011946af88786b6cdac752951dac9412bc"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_qsa_union_kernel_v1.py",
+      "source": "haloloom/qwen38/python/direct_qsa_union_kernel_v1.py",
+      "sha256": "a8ab7df41d2bea6e188a61cd96bb122950519b33265a1d4b98c671d0b9ec6d20"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_scalar_masked_kernel.py",
+      "source": "haloloom/qwen38/python/direct_scalar_masked_kernel.py",
+      "sha256": "edab832f93ba42c567d1a136d5bedda2fdcdf2caa14339d73006946df725d9be"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_scalar_pool_pair.py",
+      "source": "haloloom/qwen38/python/direct_scalar_pool_pair.py",
+      "sha256": "5bdb111f0bab4e3a46fef16c9c8264e8e70dd86d1c968372fe7481241b800d62"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_scalar_route.py",
+      "source": "haloloom/qwen38/python/direct_scalar_route.py",
+      "sha256": "ad855113eb15be50ab7622c0e518425dfd61cbd00c16934d1d4e8be3de4f6778"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_sdm3_model.py",
+      "source": "haloloom/qwen38/python/direct_sdm3_model.py",
+      "sha256": "5118e61cbc7b4c05323e41e5179267e1cb6f2ec68d92dcd92d72ae3ab520ec06"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_sdm_v2.hsaco",
+      "source": "haloloom/qwen38/kernels/direct_sdm_v2.hsaco",
+      "sha256": "a20e65f271d3cef37ed85adb4a9c21eef5ac0cc0ff0fafbfa3ac6e9e774e660d"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_w8a16.py",
+      "source": "haloloom/qwen38/python/direct_w8a16.py",
+      "sha256": "1b85323a8043411c615b265ea57415490aaeb3a766efe79155aae81ddc07a963"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_w8a16_skinny.so",
+      "source": "haloloom/qwen38/kernels/direct_w8a16_skinny.so",
+      "sha256": "8200d09698d149fb26a201f0a82ef6b68d8900b8383a269e6be6a5b1c0ed4f15"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/direct_w8hc.py",
+      "source": "haloloom/qwen38/python/direct_w8hc.py",
+      "sha256": "b26ac14599c9271ddb3ed45621e160fe0bc458dd24cc6c8a9c5eeb801546f793"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/mtp_checkpoint.py",
+      "source": "haloloom/qwen38/python/mtp_checkpoint.py",
+      "sha256": "2658978dec362fd32cbbf4abafe842cb431e54031458fda38d10caaef28160c0"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/mtp_dense.py",
+      "source": "haloloom/qwen38/python/mtp_dense.py",
+      "sha256": "7c2c911aba063e9b7e6fa546008acd334abc0d0ce6f1becfd3a11286bc30dbb8"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/native_wire_binding.py",
+      "source": "haloloom/qwen38/python/native_wire_binding.py",
+      "sha256": "8cd4b33c3f72aaace5fa3b707dbbee5f7b616fdc45794f65a0666b6572ac902f"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/quark_mixed_moe.py",
+      "source": "haloloom/qwen38/python/quark_mixed_moe.py",
+      "sha256": "262940fbf3bb1b862739f97ac7bcc0cd0d06ffef59c80f1a1a1e1de8e6977b08"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/sdm3.hsaco",
+      "source": "haloloom/qwen38/kernels/sdm3.hsaco",
+      "sha256": "308cc7d394993524eab3f8f4c627921bfa7a9ec0bced006f67f0dcdf52d6df43"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/_C.abi3.so",
+      "source": "native-wheel:vllm/_C.abi3.so",
+      "sha256": "b15a73febb15169be3243555d2d2bc7486ba60d85c1874043b0cf053b45f4f9a"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/_C_stable_libtorch.abi3.so",
+      "source": "native-wheel:vllm/_C_stable_libtorch.abi3.so",
+      "sha256": "f89cae8c4d8b1ef096faec2538833aad7372b53e3f5f2cba27a45172dba22691"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/_moe_C_stable_libtorch.abi3.so",
+      "source": "native-wheel:vllm/_moe_C_stable_libtorch.abi3.so",
+      "sha256": "083e37be14b07f83e1c76458d85467519160a7b71f86b0859c1929ff8b388bb6"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/_rocm_C.abi3.so",
+      "source": "native-wheel:vllm/_rocm_C.abi3.so",
+      "sha256": "775c3d0039e39ec62bb4be724bda3726e4522951613d345b4f88738daabf8763"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/_rust_tool_parser.abi3.so",
+      "source": "native-wheel:vllm/_rust_tool_parser.abi3.so",
+      "sha256": "1314bdb575638d8cba25e83c34632ffa90ce5e3b074ca18304bf469eb08843f5"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/compilation/monitor.py",
+      "source": "vllm/compilation/monitor.py",
+      "sha256": "2f62f2c7748fc5e15f23857dd6e4a69868bc7cd21485542f7f24b94a40f071b8"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/config/compilation.py",
+      "source": "vllm/config/compilation.py",
+      "sha256": "ab37288f062a6914919ea4af20b6e2f40efdbe159ddab22507b02de38fab1597"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/cumem_allocator.abi3.so",
+      "source": "native-wheel:vllm/cumem_allocator.abi3.so",
+      "sha256": "352635aa05f49621adbf0c43a110cf6a66330873350df6b94ea1b9f831a9d451"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/fs_io_C.abi3.so",
+      "source": "native-wheel:vllm/fs_io_C.abi3.so",
+      "sha256": "745d29b7299f51345f8efd03453ff2deaf050a23404f7e3d23213a2a1b130f24"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/model_executor/layers/fused_moe/experts/triton_moe.py",
+      "source": "vllm/model_executor/layers/fused_moe/experts/triton_moe.py",
+      "sha256": "fef1ca705603806c7d0b3cd9006e0fe2c6ec346da33881f2689243492809ee60"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/model_executor/layers/fused_moe/routed_experts.py",
+      "source": "vllm/model_executor/layers/fused_moe/routed_experts.py",
+      "sha256": "7a9b140a4e8ed50b580d0b94a9b23caddda1b8790e4b2c3ba0492476b7caa274"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/model_executor/layers/fused_moe/runner/moe_runner.py",
+      "source": "vllm/model_executor/layers/fused_moe/runner/moe_runner.py",
+      "sha256": "b388b9ef15ab0311e839b9b24286dd1a73ce29657e0fbb66f52e372f13f52c5a"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/model_executor/layers/mamba/gdn/qwen_gdn_linear_attn.py",
+      "source": "vllm/model_executor/layers/mamba/gdn/qwen_gdn_linear_attn.py",
+      "sha256": "fea369ee151220bf9950fe80d8081721b7294a39793605b1b597cd5bb79369ef"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/model_executor/layers/mamba/ops/causal_conv1d.py",
+      "source": "vllm/model_executor/layers/mamba/ops/causal_conv1d.py",
+      "sha256": "a0f55151d3c138b9b8102900627db990e5601d6b0bbd6718aa1307521cc24c62"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/model_executor/models/qwen2_moe.py",
+      "source": "vllm/model_executor/models/qwen2_moe.py",
+      "sha256": "057620a3b7ce3be1871d529d288b9313a9f09fc73625fd0341a6efb27abd97d9"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/models/qwen4_exp/amd/hyperconnection.py",
+      "source": "vllm/models/qwen4_exp/amd/hyperconnection.py",
+      "sha256": "60563fca434047de29398dea72009f5544e217b522b1c1fc91b9f266722540ef"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/models/qwen4_exp/amd/indexer_qsa.py",
+      "source": "vllm/models/qwen4_exp/amd/indexer_qsa.py",
+      "sha256": "c5bb5303b8a04a57bb1f2928c60bb69beb785f6d2e211d6cd5cc3e4732c49805"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/models/qwen4_exp/amd/model.py",
+      "source": "vllm/models/qwen4_exp/amd/model.py",
+      "sha256": "82b3fecd31650a7dea3f4fc0edbd357f943bc2a92d86821a64afb7ddb65d02eb"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/models/qwen4_exp/amd/ops/hc.py",
+      "source": "vllm/models/qwen4_exp/amd/ops/hc.py",
+      "sha256": "bbfb8a087372f7c0d6f4ab1b94181a70a9ffca46debf36607ae35f117fd5a213"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/models/qwen4_exp/amd/ops/qsa.py",
+      "source": "vllm/models/qwen4_exp/amd/ops/qsa.py",
+      "sha256": "6ab20eb2778759530ab9fbb7c4a9b435a169d68da85b2b02a75b158301407990"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/models/qwen4_exp/amd/ple_layer.py",
+      "source": "vllm/models/qwen4_exp/amd/ple_layer.py",
+      "sha256": "dd3a3419f50d3f6620ecfe7e2fdc8a1da7ae84db0004b66a165eccf72fad670b"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/models/qwen4_exp/amd/qsa.py",
+      "source": "vllm/models/qwen4_exp/amd/qsa.py",
+      "sha256": "35072d0692ec91056d9952a6a924fbb73c327a3f56fc4bd031ffab693b9f601f"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/models/qwen4_exp/amd/qsa_mtp.py",
+      "source": "vllm/models/qwen4_exp/amd/qsa_mtp.py",
+      "sha256": "24ea316220fb050adafc1dc8d7e2d4825ee148669c3829c50bb30374be20ac5b"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/models/qwen4_exp/common/ple_ssd.py",
+      "source": "vllm/models/qwen4_exp/common/ple_ssd.py",
+      "sha256": "19cbe88f6952d3a3e3a2086409c34c743e3e2bfa604324014f73ae7edbb02d2d"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/platforms/rocm.py",
+      "source": "vllm/platforms/rocm.py",
+      "sha256": "b741e9a89418c5908fc5e1d61814490a2dc6c3e4a2689e7bae0385f39e38b244"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/profiler/wrapper.py",
+      "source": "vllm/profiler/wrapper.py",
+      "sha256": "8c9aaad1c3c5bb4a123fd4f9c20c8fbc5d2698474679e9c4eaf0b0fded8ea066"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/spinloop.abi3.so",
+      "source": "native-wheel:vllm/spinloop.abi3.so",
+      "sha256": "6150f25938812bcd7b293116cd8270f822020e30d3644c1a31bf26dcdac4874b"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/third_party/flash_linear_attention/ops/chunk.py",
+      "source": "vllm/third_party/flash_linear_attention/ops/chunk.py",
+      "sha256": "5d80406effa91bb4b43300040b59a5f3e5bc0344a6666dd5004774d52669c54d"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/third_party/flash_linear_attention/ops/chunk_delta_h.py",
+      "source": "vllm/third_party/flash_linear_attention/ops/chunk_delta_h.py",
+      "sha256": "96144b18e369456ea60b456e39d8d08f672aee83567734964df25781ffaa2dcf"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/third_party/flash_linear_attention/ops/chunk_o.py",
+      "source": "vllm/third_party/flash_linear_attention/ops/chunk_o.py",
+      "sha256": "a93f951048958265b4d1c3f9e67341329196e7a57525433934215fde4b16e61b"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/third_party/flash_linear_attention/ops/chunk_scaled_dot_kkt.py",
+      "source": "vllm/third_party/flash_linear_attention/ops/chunk_scaled_dot_kkt.py",
+      "sha256": "71735d2b1c4a19eecbb6058708481817bb610426c48f96a5f646784afcf0c65c"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/third_party/flash_linear_attention/ops/fused_gdn_prefill_post_conv.py",
+      "source": "vllm/third_party/flash_linear_attention/ops/fused_gdn_prefill_post_conv.py",
+      "sha256": "6b48a1b52951cbaf34f490f5a3bba663499787a8d74984bb3d5ffdbc78b4e66a"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/third_party/flash_linear_attention/ops/solve_tril.py",
+      "source": "vllm/third_party/flash_linear_attention/ops/solve_tril.py",
+      "sha256": "e2de680e64963121b01bbfa6aca1fa8ae1a57069cc18ddfd1661ef3b19df109b"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/third_party/flash_linear_attention/ops/wy_fast.py",
+      "source": "vllm/third_party/flash_linear_attention/ops/wy_fast.py",
+      "sha256": "42b0534d1780f7fdab962efd816c1e3e7d3dcd27933edc5a64cf45d291132f04"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/v1/attention/backends/gdn_attn.py",
+      "source": "vllm/v1/attention/backends/gdn_attn.py",
+      "sha256": "ecdc2eb9b78eb140d5b6019585b20fade2b9b105ba056b49def6b4e5d9f1a40b"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/v1/attention/backends/short_conv_attn.py",
+      "source": "vllm/v1/attention/backends/short_conv_attn.py",
+      "sha256": "a0b8b72c20e5f93b4280ae0e05e009d2c000fc5a659d191494030002371a4451"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/v1/core/single_type_kv_cache_manager.py",
+      "source": "vllm/v1/core/single_type_kv_cache_manager.py",
+      "sha256": "b5efbeac94a5c25d908f5333bd7cc2dcc68a5819a4cf19ba5ee93b146821e5e4"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/v1/engine/output_processor.py",
+      "source": "vllm/v1/engine/output_processor.py",
+      "sha256": "3a87ecee8c346f2f6ceb353cef90d7d86300411c2a46a1d934d308b64af5db67"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/v1/spec_decode/qwen4_mtp.py",
+      "source": "vllm/v1/spec_decode/qwen4_mtp.py",
+      "sha256": "a509f78728bb92f53eece19e04567e25118c365b8c95efe487a1507711c72059"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/v1/spec_decode/qwen4_mtp_profile.py",
+      "source": "vllm/v1/spec_decode/qwen4_mtp_profile.py",
+      "sha256": "6ccc768517b1225ffac9a396b7deedb5154f4fe746290109f2c36cb540808eaf"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/v1/worker/first_decode_observer.py",
+      "source": "vllm/v1/worker/first_decode_observer.py",
+      "sha256": "920fe3577612d9d77b5ea7decd84ceb5b9f35aec1c855a9716b2e20ef09cbdff"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/v1/worker/gpu/cudagraph_utils.py",
+      "source": "vllm/v1/worker/gpu/cudagraph_utils.py",
+      "sha256": "84011e66a53ce9f7d029f64c3781bd2c2223882850f5104325ca1e82a967b1fd"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/v1/worker/gpu/spec_decode/autoregressive/speculator.py",
+      "source": "vllm/v1/worker/gpu/spec_decode/autoregressive/speculator.py",
+      "sha256": "890ffd9b3c2340f492aa663925ee148f39707c2c4282a368d2c16c06b5578ebe"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/w8a16_dequant_k5d.py",
+      "source": "haloloom/qwen38/python/w8a16_dequant_k5d.py",
+      "sha256": "fddc0f8eb5f6168deb4baf6bc113afdcc17a5555d4e1e419e7878dd43f8b96d6"
+    },
+    {
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/w8a16_gemm.py",
+      "source": "haloloom/qwen38/python/w8a16_gemm.py",
+      "sha256": "6e806b87af49bc5cc396b95c2bc4011950901fa15c64103fb3ea0dad4ad099a2"
+    },
+    {
+      "source": "vllm/v1/spec_decode/llm_base_proposer.py",
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/v1/spec_decode/llm_base_proposer.py",
+      "sha256": "f085226809371bdb9ed5ec6e0f397dc9a6eb0c62bfb42bdb02f97818b8bf0853"
+    },
+    {
+      "source": "vllm/model_executor/layers/quantization/quark/quark.py",
+      "installed_path": "/opt/venv/lib/python3.14/site-packages/vllm/model_executor/layers/quantization/quark/quark.py",
+      "sha256": "d7979f9df5d1ca8871d876631fb10af040f14dceb04c4e45441bc2028b2f2ab5"
+    }
+  ]
+}

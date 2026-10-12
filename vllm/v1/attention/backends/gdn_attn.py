@@ -77,6 +77,8 @@ class GDNAttentionMetadata:
     nums_dict: dict | None = None
     batch_ptr: torch.Tensor | None = None
     token_chunk_offset_ptr: torch.Tensor | None = None
+    # direct campaign: internal Mamba prefill checkpoint (direct_mamba_ckpt_v1.GDNCheckpoint)
+    direct_ckpt: object | None = None
 
 
 class GDNAttentionMetadataBuilder(AttentionMetadataBuilder[GDNAttentionMetadata]):
@@ -570,3 +572,21 @@ class GDNAttentionMetadataBuilder(AttentionMetadataBuilder[GDNAttentionMetadata]
         assert num_decode_draft_tokens_cpu.shape == num_accepted_tokens.shape
 
         return self.build(0, m, num_accepted_tokens, num_decode_draft_tokens_cpu)
+
+
+# --- direct campaign: internal Mamba prefill checkpoint (direct_mamba_ckpt_v1) ---
+_direct_orig_gdn_build = GDNAttentionMetadataBuilder.build
+
+
+def _direct_gdn_build(self, common_prefix_len, common_attn_metadata, *args, **kwargs):
+    md = _direct_orig_gdn_build(self, common_prefix_len, common_attn_metadata, *args, **kwargs)
+    if self.kv_cache_spec.num_prefill_checkpoint_blocks > 0 and md.num_prefills > 0:
+        import direct_mamba_ckpt_v1 as _direct_mamba_ckpt
+
+        ck = _direct_mamba_ckpt.build_gdn(self, common_attn_metadata, md)
+        if ck is not None:
+            md.direct_ckpt = ck
+    return md
+
+
+GDNAttentionMetadataBuilder.build = _direct_gdn_build

@@ -1,0 +1,8 @@
+**
+!vllm
+!vllm/**
+!haloloom
+!haloloom/qwen38
+!haloloom/qwen38/**
+**/__pycache__
+**/*.pyc

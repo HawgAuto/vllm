@@ -73,6 +73,10 @@ from .utils import (
 logger = init_logger(__name__)
 
 
+import os as _dmf_os
+_DIRECT_MOE_SHARED_FOLD = _dmf_os.environ.get("DIRECT_MOE_SHARED_FOLD") == "1"
+
+
 class Qwen2MoeMLP(nn.Module):
     def __init__(
         self,
@@ -118,7 +122,12 @@ class Qwen2MoeMLP(nn.Module):
         out, _ = self.down_proj(out)
 
         if self.expert_gate is not None:
-            out = F.sigmoid(self.expert_gate(x)[0]) * out
+            g = F.sigmoid(self.expert_gate(x)[0])
+            if _DIRECT_MOE_SHARED_FOLD:
+                import direct_moe_reduction as _dmr
+                if _dmr.fold_stash_gate(g):
+                    return out  # unscaled; the moe_forward_shared wrapper/reduce applies bf16(g*out) exactly
+            out = g * out
 
         return out
 

@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
 from typing import Any
+import json as _dcg_json
+import os as _dcg_os
 
 import torch
 import torch.nn as nn
@@ -24,6 +26,26 @@ from vllm.v1.worker.gpu.spec_decode.speculator import DraftModelSpeculator
 from vllm.v1.worker.utils import AttentionGroup, get_uniform_decode_token_count
 
 logger = init_logger(__name__)
+
+# draftcg-v1 (default off): FULL uniform 1-token draft-decode graphs while the target stays PIECEWISE.
+_DCG_ON = _dcg_os.environ.get("DIRECT_DRAFT_DECODE_FULL") == "1"
+_DCG = {"full": 0, "eager": 0, "eager_after_capture": 0, "captured": False}
+
+
+def _dcg_log(tag, **kw):
+    logger.info("DIRECT_DRAFTCG %s", _dcg_json.dumps({"tag": tag, **kw}, sort_keys=True))
+
+
+def _dcg_count(full):
+    if full:
+        _DCG["full"] += 1
+    else:
+        _DCG["eager"] += 1
+        if _DCG["captured"]:
+            _DCG["eager_after_capture"] += 1
+    n = _DCG["full"] + _DCG["eager"]
+    if n == 1 or n % 256 == 0 or (not full and _DCG["captured"]):
+        _dcg_log("steps", **{k: v for k, v in _DCG.items() if k != "captured"})
 
 
 class AutoRegressiveSpeculator(DraftModelSpeculator):
@@ -130,10 +152,19 @@ class AutoRegressiveSpeculator(DraftModelSpeculator):
         )
 
         # PIECEWISE cudagraphs are not supported for draft decodes.
+        target_mode = cudagraph_mode
         if cudagraph_mode.decode_mode() == CUDAGraphMode.FULL:
+            cudagraph_mode = CUDAGraphMode.FULL_DECODE_ONLY
+        elif _DCG_ON and cudagraph_mode != CUDAGraphMode.NONE:
+            # draftcg-v1: draft decode batches are uniform 1-token/request; capture them FULL
+            # independently of the target PIECEWISE mode (draft prefill is unchanged).
             cudagraph_mode = CUDAGraphMode.FULL_DECODE_ONLY
         else:
             cudagraph_mode = CUDAGraphMode.NONE
+        if _DCG_ON:
+            _dcg_log("init", target_mode=target_mode.name, draft_decode_mode=cudagraph_mode.name,
+                     num_speculative_steps=self.num_speculative_steps,
+                     fused_multi_step=bool(self.use_fused_multi_step_decode))
 
         # Initialize cudagraph manager for draft decodes (draft positions > 0).
         self.decode_cudagraph_manager = SpeculatorCudaGraphManager(
@@ -192,6 +223,12 @@ class AutoRegressiveSpeculator(DraftModelSpeculator):
             progress_bar_desc="Capturing decode CUDA graphs",
         )
         self.on_multi_step_decode_end(self.max_num_reqs)
+        if _DCG_ON:
+            _DCG["captured"] = True
+            _dcg_log("captured", fused_multi_step=bool(self.use_fused_multi_step_decode),
+                     graphs=[{"mode": d.cg_mode.name, "num_tokens": d.num_tokens, "num_reqs": d.num_reqs,
+                              "uniform_token_count": d.uniform_token_count}
+                             for d in self.decode_cudagraph_manager.graphs])
 
     @torch.inference_mode()
     def propose(
@@ -535,6 +572,8 @@ class AutoRegressiveSpeculator(DraftModelSpeculator):
 
             self.current_draft_step.fill_(step)
 
+            if _DCG_ON:
+                _dcg_count(batch_desc.cg_mode == CUDAGraphMode.FULL)
             if batch_desc.cg_mode == CUDAGraphMode.FULL:
                 assert self.decode_cudagraph_manager is not None
                 self.decode_cudagraph_manager.run_fullgraph(batch_desc)

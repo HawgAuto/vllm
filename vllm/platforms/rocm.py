@@ -785,16 +785,19 @@ class RocmPlatform(Platform):
             logger.info_once("Using Flash Attention backend for ViT model.")
             return AttentionBackendEnum.FLASH_ATTN
 
-        # RDNA3/RDNA4 (gfx11xx/gfx12xx): Use Flash Attention Triton backend
+        # RDNA3/RDNA4 (gfx11xx/gfx12xx): use the dedicated Triton enum so
+        # MMEncoderAttention dispatches to _forward_triton. Returning
+        # FLASH_ATTN here incorrectly routes into the unavailable upstream
+        # flash_attn_varlen_func even though the Triton implementation exists.
         if (
             on_gfx1x()
             and flash_attn_triton_available()
             and (dtype == torch.float16 or dtype == torch.bfloat16)
         ):
             logger.info_once(
-                "Using Flash Attention (Triton backend) for ViT model on RDNA."
+                "Using Triton Attention backend for ViT model on RDNA."
             )
-            return AttentionBackendEnum.FLASH_ATTN
+            return AttentionBackendEnum.TRITON_ATTN
 
         logger.info_once("Using Torch SDPA backend for ViT model.")
         return AttentionBackendEnum.TORCH_SDPA
