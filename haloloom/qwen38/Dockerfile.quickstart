@@ -1,0 +1,15 @@
+# syntax=docker/dockerfile:1
+# Quick-start layer over the qualified v0.1.5-qwen38 runtime. Adds only the profile
+# launcher and the frozen compile/autotune seeds; every runtime layer is unchanged.
+# Build context: repository root; seeds staged at haloloom/qwen38/seeds (data/seeds.json).
+FROM ghcr.io/hawgauto/haloloom-vllm-full-gfx1151@sha256:cae0f284223e8aa54a7cfc3f9f4f74d0f7454418f4f6d6923c20bd0a32214d1c
+USER root
+COPY haloloom/qwen38/launch.py /opt/haloloom/qwen38/launch.py
+COPY haloloom/qwen38/data/seeds.json /opt/haloloom/qwen38/data/seeds.json
+COPY haloloom/qwen38/seeds/ /opt/haloloom/qwen38/seeds/
+RUN cd /opt/haloloom/qwen38/seeds && sha256sum -c --quiet SHA256SUMS \
+ && /opt/venv/bin/python3 -B /opt/haloloom/qwen38/validate.py >/dev/null \
+ && chmod -R a+rX,go-w /opt/haloloom/qwen38/seeds
+USER 1000:1000
+LABEL haloloom.qwen38_quickstart="profiles default(262144)+max(YaRN4); seeds int8,bf16,int8-yarn4,bf16-yarn4" \
+      haloloom.qwen38_base_image="sha256:cae0f284223e8aa54a7cfc3f9f4f74d0f7454418f4f6d6923c20bd0a32214d1c"

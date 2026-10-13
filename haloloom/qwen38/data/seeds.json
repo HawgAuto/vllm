@@ -1,0 +1,90 @@
+{
+  "schema": "haloloom.qwen38.seed-manifest.v1",
+  "base_image": "sha256:cae0f284223e8aa54a7cfc3f9f4f74d0f7454418f4f6d6923c20bd0a32214d1c",
+  "sha256sums_sha256": "c94cf293f9ad02bcef55c357fc24bc460a533dd5ec0254cc85a9550f350d1f03",
+  "seeds": {
+    "bf16": {
+      "files": 6935,
+      "bytes": 538764617,
+      "aot_graph_keys": [
+        "bb29ca6b2752912f9dbd412d7c57cc06baf570af841dbe31a459a364ab47e674",
+        "ea2f18776b131bc62354315144070204c7db78f51a4bb92b183ab294e8850e5b",
+        "ee78e3a68d21ce78c54396e8823e3336574d911bfddd3b905bbc374bdab12544"
+      ],
+      "tuning_records": 107,
+      "rope": "native (no YaRN)",
+      "launcher_profile": "default (--profile default => --max-model-len 262144, --generation-config auto)",
+      "contexts": {
+        "ordinary": 262144,
+        "mtp3": 262144
+      }
+    },
+    "bf16-yarn4": {
+      "files": 7213,
+      "bytes": 550203338,
+      "aot_graph_keys": [
+        "1c36fde6bf064e6c16a3014c4650e77322f28290edb340dab0b0e213f675be58",
+        "85ff625fea5417423111ce3ac26f96a577d1c733cdbf3ae304c6ba14002760b1",
+        "9a7cc8923c39f83f41d240d032ee5dc1e24c1c9710e5eebb9ce4f065b1f47e3f"
+      ],
+      "tuning_records": 107,
+      "rope": "YaRN factor 4 over 262144",
+      "launcher_profile": "--profile max",
+      "contexts": {
+        "ordinary": 851968,
+        "mtp3": 720896
+      }
+    },
+    "int8": {
+      "files": 6935,
+      "bytes": 553599923,
+      "aot_graph_keys": [
+        "bb29ca6b2752912f9dbd412d7c57cc06baf570af841dbe31a459a364ab47e674",
+        "ea2f18776b131bc62354315144070204c7db78f51a4bb92b183ab294e8850e5b",
+        "ee78e3a68d21ce78c54396e8823e3336574d911bfddd3b905bbc374bdab12544"
+      ],
+      "tuning_records": 107,
+      "rope": "native (no YaRN)",
+      "launcher_profile": "default (--profile default => --max-model-len 262144, --generation-config auto)",
+      "contexts": {
+        "ordinary": 262144,
+        "mtp3": 262144
+      }
+    },
+    "int8-yarn4": {
+      "files": 7261,
+      "bytes": 564646447,
+      "aot_graph_keys": [
+        "8a2e461d8c106e6f36d6cd0b259dad643589a70f67ed2d347e8bf53b4c9f8418",
+        "bbdfccf412ad74b17afe653d0c8ec439f219572e247d662c2a2c2165b8533ac5",
+        "eea46f8600936c16ee50f784b85c167d10ea80a947f1c72a33be01b124d509b8"
+      ],
+      "tuning_records": 107,
+      "rope": "YaRN factor 4 over 262144",
+      "launcher_profile": "--profile max",
+      "contexts": {
+        "ordinary": 1048576,
+        "mtp3": 917504
+      }
+    }
+  },
+  "qualification": {
+    "cold_replays": 8,
+    "result": "all PASS: direct AOT load, no graph compile, workspace cache byte-identical to seed apart from launcher marker, frozen seed hashes unchanged",
+    "replay_ready_s": {
+      "default": {
+        "int8_ord": 95.5,
+        "int8_mtp3": 99.3,
+        "bf16_ord": 93.7,
+        "bf16_mtp3": 97.5
+      },
+      "max": {
+        "int8_ord": 95.7,
+        "int8_mtp3": 220.9,
+        "bf16_ord": 95.3,
+        "bf16_mtp3": 99.6
+      }
+    },
+    "note_int8_mtp3_max": "220.9 s was a cold page-cache weight read (139.6 s), not compilation"
+  }
+}

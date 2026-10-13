@@ -4,3 +4,6 @@ __pycache__/
 !python/direct_hip_module_v1.py
 !csrc/*.hip
 !kernels/*.so
+
+# Quick-start cache seeds are image build inputs (~2.2 GB), bound by data/seeds.json.
+/seeds/
