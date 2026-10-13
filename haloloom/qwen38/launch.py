@@ -146,6 +146,7 @@ def command(args):
     args.kv_cache_memory_bytes = getattr(args, 'kv_cache_memory_bytes', DEFAULT_KV_BYTES)
     args.sampling = getattr(args, 'sampling', 'thinking')
     args.yarn_factor = getattr(args, 'yarn_factor', None)
+    args.tool_call_parser = getattr(args, 'tool_call_parser', 'qwen3_coder')
     argv = [sys.executable, '-m', 'vllm.entrypoints.openai.api_server',
             '--model', str(MODEL), '--tokenizer', str(MODEL),
             '--served-model-name', args.served_model_name,
@@ -162,6 +163,10 @@ def command(args):
             '--mamba-cache-mode', 'align',
             '--reasoning-parser', 'qwen3', '--enable-prompt-tokens-details',
             '--enable-per-request-metrics', '--max-model-len', str(args.context)]
+    # The chat template emits Qwen's XML tool calls (<tool_call><function=...><parameter=...>),
+    # parsed by vLLM's qwen3_coder parser. API-server option only: not in the compile-cache key.
+    if args.tool_call_parser != 'none':
+        argv += ['--enable-auto-tool-choice', '--tool-call-parser', args.tool_call_parser]
     # The model's generation_config.json already carries Qwen's thinking-mode values
     # (temperature 1.0, top_p 0.95, top_k 20; min_p/presence/repetition stay at neutral
     # defaults), so 'thinking' needs no override. Generation-config flags are part of
@@ -211,6 +216,8 @@ def main():
     ap.add_argument('--max-num-seqs', type=int, default=1)
     ap.add_argument('--max-num-batched-tokens', type=int, default=12288)
     ap.add_argument('--served-model-name', default='haloloom-qwen38')
+    ap.add_argument('--tool-call-parser', choices=['qwen3_coder', 'none'], default='qwen3_coder',
+                    help="tool calling for the OpenAI API: qwen3_coder (matches the chat template) or 'none'")
     ap.add_argument('--eager', action='store_true', help='Disable compiled graphs for diagnosis')
     ap.add_argument('--host', default='0.0.0.0')
     ap.add_argument('--port', type=int, default=8000)

@@ -56,7 +56,11 @@ variant and rope setting and never shares compiled graphs between them. Any othe
 
 Sampling defaults to Qwen's thinking-mode values from the checkpoint's
 `generation_config.json` (`--sampling thinking`); `--sampling instruct` and
-`--sampling vllm` are available. `--print-command` shows the exact server command;
+`--sampling vllm` are available. OpenAI tool calling is on by default (`--enable-auto-tool-choice
+--tool-call-parser qwen3_coder`, matching the chat template's XML tool-call format;
+`--tool-call-parser none` disables it). The chat template defaults to `reasoning_effort`
+`xhigh` (accepts `xhigh`, `medium`, `low`) and keeps prior-turn reasoning
+(`preserve_thinking`). `--print-command` shows the exact server command;
 `--cpu-check` validates installed payload hashes and public model indices without
 claiming GPU inference. Ordinary multi-sequence launches disable prefix caching, matching
 the qualified sweep; `--max-num-batched-tokens` defaults to 12288. MTP3 is limited to one
